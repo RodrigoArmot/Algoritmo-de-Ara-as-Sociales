@@ -19,7 +19,6 @@ public:
         const int valor = static_cast<int>(uniforme() * limite);
         return valor < limite ? valor : limite - 1;
     }
-
     vector<int> muestra(int total, int cantidad) {
         vector<int> indices(total);
         iota(indices.begin(), indices.end(), 0);

@@ -21,18 +21,25 @@ struct Fertilizante {
     vector<int> atomosPorEspecie;
 };
 
-// Aporte de un fertilizante a la concentración de una especie, por unidad de dosis.
 struct Aporte {
     int especie;
     double aporteUnitario;
 };
 
-struct Instancia {
+class Instancia {
+public:
+    static Instancia leer(const string& carpeta);
+
+    int dimension() const { return numFertilizantes * numEtapas; }
+
     string nombre;
     vector<Especie> especies;
     vector<Fertilizante> fertilizantes;
     int numEspecies = 0, numFertilizantes = 0, numEtapas = 0;
-    double volumen = 0.0, conductividadMax = 0.0, pesoDesviacion = 0.0, costoReferencia = 0.0;
+    double volumen = 0.0;
+    double conductividadMax = 0.0;
+    double pesoDesviacion = 0.0;
+    double costoReferencia = 0.0;
     int maxFertilizantes = 0;
     vector<double> concMin, concMax, concRef;
     vector<double> concAgua;
@@ -44,10 +51,10 @@ struct Instancia {
     double desviacionInicial = 0.0;
     vector<double> dosisLimite;
 
-    int dimension() const { return numFertilizantes * numEtapas; }
+private:
+    void calcularDerivados();
+    void validar() const;
 };
-
-Instancia leerInstancia(const string& carpeta);
 
 map<string, string> leerClaveValor(const string& ruta);
 

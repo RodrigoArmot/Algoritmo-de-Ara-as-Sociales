@@ -63,7 +63,10 @@ int indiceEspecie(const Instancia& instancia, const string& simbolo) {
     throw runtime_error("especie desconocida '" + simbolo + "'");
 }
 
-void calcularDerivados(Instancia& instancia) {
+}  // namespace
+
+void Instancia::calcularDerivados() {
+    Instancia& instancia = *this;
     const int numEspecies = instancia.numEspecies;
     const int numFertilizantes = instancia.numFertilizantes;
     const int numEtapas = instancia.numEtapas;
@@ -125,7 +128,18 @@ void calcularDerivados(Instancia& instancia) {
             }
 }
 
-}  // namespace
+void Instancia::validar() const {
+    for (int i = 0; i < numEspecies * numEtapas; ++i)
+        if (concMin[i] > concMax[i])
+            throw runtime_error(nombre + ": límite inferior mayor que el superior en " +
+                                especies[i / numEtapas].simbolo);
+    for (int fertilizante = 0; fertilizante < numFertilizantes; ++fertilizante)
+        if (aportes[fertilizante].empty())
+            throw runtime_error(nombre + ": " + fertilizantes[fertilizante].nombre +
+                                " no aporta ninguna especie de la instancia");
+    if (!(cationesAgua < limiteCationes))
+        throw runtime_error(nombre + ": el agua de partida agota por sí sola el límite de conductividad");
+}
 
 double aReal(const string& texto, const string& contexto) {
     double valor = 0.0;
@@ -153,7 +167,7 @@ map<string, string> leerClaveValor(const string& ruta) {
     return valores;
 }
 
-Instancia leerInstancia(const string& carpeta) {
+Instancia Instancia::leer(const string& carpeta) {
     Instancia instancia;
     string ruta = carpeta;
     while (!ruta.empty() && (ruta.back() == '/' || ruta.back() == '\\')) ruta.pop_back();
@@ -218,6 +232,7 @@ Instancia leerInstancia(const string& carpeta) {
     }
     instancia.numFertilizantes = static_cast<int>(instancia.fertilizantes.size());
 
-    calcularDerivados(instancia);
+    instancia.calcularDerivados();
+    instancia.validar();
     return instancia;
 }

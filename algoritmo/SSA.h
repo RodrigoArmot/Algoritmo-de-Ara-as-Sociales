@@ -1,10 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "Aleatorio.h"
+#include "Arana.h"
+#include "FuncionObjetivo.h"
 #include "Instancia.h"
-#include "Modelo.h"
+#include "OperadorReparacion.h"
+#include "Solucion.h"
 
 using namespace std;
 
@@ -23,4 +27,20 @@ struct ResultadoSSA {
     uint64_t semilla = 0;
 };
 
-ResultadoSSA ejecutarSSA(const Instancia& instancia, const ParametrosSSA& parametros, Aleatorio& azar);
+class AlgoritmoSSA {
+public:
+    AlgoritmoSSA(const Instancia& instancia, const ParametrosSSA& parametros);
+
+    ResultadoSSA ejecutar(Aleatorio& azar) const;
+
+    Solucion posicionInicial(Aleatorio& azar) const;
+
+    static double distancia(const vector<double>& posicionA, const vector<double>& posicionB);
+    static double promedioDesviaciones(const vector<Vibracion>& vibraciones);
+
+private:
+    const Instancia& instancia_;
+    ParametrosSSA parametros_;
+    FuncionObjetivo funcionObjetivo_;
+    OperadorReparacion operadorReparacion_;
+};
