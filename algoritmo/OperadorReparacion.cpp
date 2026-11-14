@@ -2,78 +2,69 @@
 
 #include <vector>
 
-using namespace std;
-
-double OperadorReparacion::sumaCationes(const Solucion& solucion, int etapa) const {
-    double aportado = 0.0;
-    for (int fertilizante = 0; fertilizante < instancia_.numFertilizantes; ++fertilizante)
-        aportado += instancia_.coefCationes[fertilizante] * solucion.dosis(fertilizante, etapa);
-    return instancia_.cationesAgua + aportado;
+double OperadorReparacion::sumaCationes(const Solucion& x, int s) const {
+    double v = 0.0;
+    for (int f = 0; f < I.F; ++f) v += I.coefCationes[f] * x.dosis(f, s);
+    return I.u + v;
 }
 
-double OperadorReparacion::aporteRelativo(const Solucion& solucion, int fertilizante) const {
-    double total = 0.0;
-    for (int etapa = 0; etapa < instancia_.numEtapas; ++etapa)
-        for (const Aporte& aporte : instancia_.aportes[fertilizante]) {
-            const int indice = aporte.especie * instancia_.numEtapas + etapa;
-            if (instancia_.concMin[indice] > 0.0)
-                total += aporte.aporteUnitario * solucion.dosis(fertilizante, etapa) / instancia_.concRef[indice];
+double OperadorReparacion::aporteRelativo(const Solucion& x, int f) const {
+    double A = 0.0;
+    for (int s = 0; s < I.S; ++s)
+        for (const Aporte& a : I.aportes[f]) {
+            const int i = a.especie * I.S + s;
+            if (I.Cmin[i] > 0.0) A += a.alfa * x.dosis(f, s) / I.Cref[i];
         }
-    return total;
+    return A;
 }
 
-void OperadorReparacion::reparar(Solucion& solucion) const {
-    const int numFertilizantes = instancia_.numFertilizantes;
-    const int numEtapas = instancia_.numEtapas;
+void OperadorReparacion::reparar(Solucion& x) const {
+    const int F = I.F, S = I.S;
 
-    for (int fertilizante = 0; fertilizante < numFertilizantes; ++fertilizante) {
-        const double dosisMin = instancia_.fertilizantes[fertilizante].dosisMin;
-        const double dosisMax = instancia_.fertilizantes[fertilizante].dosisMax;
-        for (int etapa = 0; etapa < numEtapas; ++etapa) {
-            double& dosis = solucion.dosis(fertilizante, etapa);
-            if (dosis > dosisMax) dosis = dosisMax;
-            if (dosis > 0.0 && dosis < dosisMin) dosis = dosis < dosisMin / 2.0 ? 0.0 : dosisMin;
+    // 1. Cota superior y dominio disjunto de la dosis mínima realizable.
+    for (int f = 0; f < F; ++f) {
+        const double eps = I.fertilizantes[f].epsilon, delta = I.fertilizantes[f].delta;
+        for (int s = 0; s < S; ++s) {
+            double& q = x.dosis(f, s);
+            if (q > delta) q = delta;
+            if (q > 0.0 && q < eps) q = q < eps / 2.0 ? 0.0 : eps;
         }
     }
 
-    for (int etapa = 0; etapa < numEtapas; ++etapa) {
-        double aportado = 0.0;
-        for (int fertilizante = 0; fertilizante < numFertilizantes; ++fertilizante)
-            aportado += instancia_.coefCationes[fertilizante] * solucion.dosis(fertilizante, etapa);
-        if (instancia_.cationesAgua + aportado <= instancia_.limiteCationes) continue;
-        const double factorReduccion = (instancia_.limiteCationes - instancia_.cationesAgua) / aportado;
-        for (int fertilizante = 0; fertilizante < numFertilizantes; ++fertilizante) {
-            double& dosis = solucion.dosis(fertilizante, etapa);
-            dosis *= factorReduccion;
-            if (dosis > 0.0 && dosis < instancia_.fertilizantes[fertilizante].dosisMin) dosis = 0.0;
+    // 2. Tolerancia de conductividad.
+    for (int s = 0; s < S; ++s) {
+        double v = 0.0;
+        for (int f = 0; f < F; ++f) v += I.coefCationes[f] * x.dosis(f, s);
+        if (I.u + v <= I.L) continue;
+        const double lambda = (I.L - I.u) / v;
+        for (int f = 0; f < F; ++f) {
+            double& q = x.dosis(f, s);
+            q *= lambda;
+            if (q > 0.0 && q < I.fertilizantes[f].epsilon) q = 0.0;
         }
     }
 
-    vector<double> aporteRelativoPorFertilizante(numFertilizantes, 0.0);
+    // 3. Disponibilidad acotada de insumos. El aporte relativo se calcula una vez, antes de retirar.
+    // En empate se retira el más caro y, si también empatan, el de mayor índice.
+    std::vector<double> A(F, 0.0);
     int adquiridos = 0;
-    for (int fertilizante = 0; fertilizante < numFertilizantes; ++fertilizante)
-        if (solucion.seleccionado(fertilizante)) {
-            aporteRelativoPorFertilizante[fertilizante] = aporteRelativo(solucion, fertilizante);
+    for (int f = 0; f < F; ++f)
+        if (x.seleccionado(f)) {
+            A[f] = aporteRelativo(x, f);
             ++adquiridos;
         }
-    while (adquiridos > instancia_.maxFertilizantes) {
-        int aRetirar = -1;
-        for (int fertilizante = 0; fertilizante < numFertilizantes; ++fertilizante) {
-            if (!solucion.seleccionado(fertilizante)) continue;
-            if (aRetirar == -1) {
-                aRetirar = fertilizante;
+    while (adquiridos > I.k) {
+        int retirar = -1;
+        for (int f = 0; f < F; ++f) {
+            if (!x.seleccionado(f)) continue;
+            if (retirar == -1) {
+                retirar = f;
                 continue;
             }
-            const double precioActual = instancia_.fertilizantes[fertilizante].precio;
-            const double precioRetirar = instancia_.fertilizantes[aRetirar].precio;
-            const double aporteActual = aporteRelativoPorFertilizante[fertilizante];
-            const double aporteRetirar = aporteRelativoPorFertilizante[aRetirar];
-            if (aporteActual < aporteRetirar ||
-                (aporteActual == aporteRetirar &&
-                 (precioActual > precioRetirar || (precioActual == precioRetirar && fertilizante > aRetirar))))
-                aRetirar = fertilizante;
+            const double Pf = I.fertilizantes[f].precio, Pr = I.fertilizantes[retirar].precio;
+            if (A[f] < A[retirar] || (A[f] == A[retirar] && (Pf > Pr || (Pf == Pr && f > retirar)))) retirar = f;
         }
-        for (int etapa = 0; etapa < numEtapas; ++etapa) solucion.dosis(aRetirar, etapa) = 0.0;
+        for (int s = 0; s < S; ++s) x.dosis(retirar, s) = 0.0;
         --adquiridos;
     }
 }

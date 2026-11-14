@@ -4,94 +4,84 @@
 #include <cmath>
 #include <stdexcept>
 
-using namespace std;
-
 AlgoritmoSSA::AlgoritmoSSA(const Instancia& instancia, const ParametrosSSA& parametros)
-    : instancia_(instancia),
-      parametros_(parametros),
-      funcionObjetivo_(instancia),
-      operadorReparacion_(instancia) {
-    if (parametros_.poblacion < 1 || parametros_.iteraciones < 1)
-        throw invalid_argument("la población y las iteraciones deben ser positivas");
+    : I(instancia), P(parametros), objetivo(instancia), reparacion(instancia) {
+    if (P.poblacion < 1 || P.iteraciones < 1)
+        throw std::invalid_argument("la población y las iteraciones deben ser positivas");
 }
 
-double AlgoritmoSSA::distancia(const vector<double>& posicionA, const vector<double>& posicionB) {
-    double suma = 0.0;
-    for (size_t i = 0; i < posicionA.size(); ++i) suma += fabs(posicionA[i] - posicionB[i]);
-    return suma;
+double AlgoritmoSSA::distancia(const std::vector<double>& a, const std::vector<double>& b) {
+    double d = 0.0;
+    for (std::size_t i = 0; i < a.size(); ++i) d += std::fabs(a[i] - b[i]);
+    return d;
 }
 
-double AlgoritmoSSA::promedioDesviaciones(const vector<Vibracion>& vibraciones) {
-    const size_t dimension = vibraciones.front().origen.size();
-    const double cantidad = static_cast<double>(vibraciones.size());
+double AlgoritmoSSA::promedioDesviaciones(const std::vector<Vibracion>& v) {
+    const std::size_t dimension = v.front().origen.size();
+    const double n = static_cast<double>(v.size());
     double suma = 0.0;
-    for (size_t i = 0; i < dimension; ++i) {
+    for (std::size_t i = 0; i < dimension; ++i) {
         double media = 0.0;
-        for (const auto& vibracion : vibraciones) media += vibracion.origen[i];
-        media /= cantidad;
-        double sumaCuadrados = 0.0;
-        for (const auto& vibracion : vibraciones)
-            sumaCuadrados += (media - vibracion.origen[i]) * (media - vibracion.origen[i]);
-        suma += sqrt(sumaCuadrados / cantidad);
+        for (const auto& x : v) media += x.origen[i];
+        media /= n;
+        double cuadrados = 0.0;
+        for (const auto& x : v) cuadrados += (media - x.origen[i]) * (media - x.origen[i]);
+        suma += std::sqrt(cuadrados / n);
     }
     return suma / static_cast<double>(dimension);
 }
 
 Solucion AlgoritmoSSA::posicionInicial(Aleatorio& azar) const {
-    Solucion solucion(instancia_);
-    for (int fertilizante : azar.muestra(instancia_.numFertilizantes,
-                                         min(instancia_.maxFertilizantes, instancia_.numFertilizantes)))
-        for (int etapa = 0; etapa < instancia_.numEtapas; ++etapa)
-            solucion.dosis(fertilizante, etapa) =
-                azar.uniforme(instancia_.fertilizantes[fertilizante].dosisMin,
-                              instancia_.dosisLimite[fertilizante * instancia_.numEtapas + etapa]);
-    return solucion;
+    Solucion x(I);
+    for (int f : azar.muestra(I.F, std::min(I.k, I.F)))
+        for (int s = 0; s < I.S; ++s) x.dosis(f, s) = azar.uniforme(I.fertilizantes[f].epsilon, I.beta[f * I.S + s]);
+    return x;
 }
 
 ResultadoSSA AlgoritmoSSA::ejecutar(Aleatorio& azar) const {
-    const size_t numAranas = parametros_.poblacion;
-    ResultadoSSA resultado;
-    resultado.semilla = azar.semilla();
+    const std::size_t n = P.poblacion;
+    ResultadoSSA r;
+    r.semilla = azar.semilla();
 
-    vector<Arana> aranas;
-    aranas.reserve(numAranas);
-    for (size_t i = 0; i < numAranas; ++i) {
-        Solucion solucion = posicionInicial(azar);
-        operadorReparacion_.reparar(solucion);
-        aranas.emplace_back(solucion);
+    // Población inicial: posición al azar y reparada.
+    std::vector<Arana> aranas;
+    aranas.reserve(n);
+    for (std::size_t a = 0; a < n; ++a) {
+        Solucion x = posicionInicial(azar);
+        reparacion.reparar(x);
+        aranas.emplace_back(x);
     }
 
-    vector<Vibracion> vibraciones(numAranas);
-    vector<vector<double>> distancias(numAranas, vector<double>(numAranas, 0.0));
+    std::vector<Vibracion> vibraciones(n);
+    std::vector<std::vector<double>> distancias(n, std::vector<double>(n, 0.0));
     bool hayMejor = false;
 
-    for (int iteracion = 0; iteracion < parametros_.iteraciones; ++iteracion) {
-        for (size_t indiceArana = 0; indiceArana < numAranas; ++indiceArana) {
-            Solucion& solucion = aranas[indiceArana].posicion;
-            funcionObjetivo_.evaluar(solucion);
-            ++resultado.evaluaciones;
-            if (!hayMejor || solucion.aptitud < resultado.mejor.aptitud) {
-                resultado.mejor = solucion;
+    for (int iteracion = 0; iteracion < P.iteraciones; ++iteracion) {
+        for (std::size_t a = 0; a < n; ++a) {
+            Solucion& x = aranas[a].posicion;
+            objetivo.evaluar(x);
+            ++r.evaluaciones;
+            if (!hayMejor || x.Z < r.mejor.Z) {
+                r.mejor = x;
                 hayMejor = true;
             }
-            vibraciones[indiceArana].logIntensidad = FuncionObjetivo::logIntensidad(solucion.aptitud);
-            vibraciones[indiceArana].origen = solucion.vectorDosis;
+            vibraciones[a].logIntensidad = FuncionObjetivo::logIntensidad(x.Z);
+            vibraciones[a].origen = x.q;
         }
 
-        const double desviacionPromedio = promedioDesviaciones(vibraciones);
-        for (size_t i = 0; i < numAranas; ++i)
-            for (size_t j = i + 1; j < numAranas; ++j)
-                distancias[i][j] = distancias[j][i] = distancia(vibraciones[i].origen, vibraciones[j].origen);
+        const double sigma = promedioDesviaciones(vibraciones);
+        for (std::size_t a = 0; a < n; ++a)
+            for (std::size_t b = a + 1; b < n; ++b)
+                distancias[a][b] = distancias[b][a] = distancia(vibraciones[a].origen, vibraciones[b].origen);
 
-        for (size_t indiceArana = 0; indiceArana < numAranas; ++indiceArana) {
-            Arana& arana = aranas[indiceArana];
-            arana.elegirVibracion(vibraciones, distancias[indiceArana], desviacionPromedio,
-                                  parametros_.tasaAtenuacion);
-            arana.cambiarMascara(parametros_.probCambioMascara, parametros_.probMascara, azar);
-            arana.caminar(vibraciones, instancia_.dosisLimite, azar);
-            operadorReparacion_.reparar(arana.posicion);
+        for (std::size_t a = 0; a < n; ++a) {
+            Arana& arana = aranas[a];
+            arana.elegirVibracion(vibraciones, distancias[a], sigma, P.ra);
+            arana.cambiarMascara(P.pc, P.pm, azar);
+            arana.caminar(vibraciones, I.beta, azar);
+            reparacion.reparar(arana.posicion);
         }
-        ++resultado.iteraciones;
+        ++r.iteraciones;
     }
-    return resultado;
+    return r;
 }

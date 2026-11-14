@@ -2,71 +2,63 @@
 
 #include <cmath>
 
-using namespace std;
-
 Arana::Arana(const Solucion& posicionInicial)
-    : posicion(posicionInicial),
-      movimiento(posicionInicial.vectorDosis.size(), 0.0),
-      mascara(posicionInicial.vectorDosis.size(), 0) {
-    vibracionObjetivo.origen = posicion.vectorDosis;
+    : posicion(posicionInicial), m(posicionInicial.q.size(), 0.0), mascara(posicionInicial.q.size(), 0) {
+    objetivo.origen = posicion.q;
 }
 
-double Arana::logIntensidadRecibida(double logIntensidadOrigen, double distanciaAlOrigen,
-                                    double desviacionPromedio, double tasaAtenuacion) {
-    if (distanciaAlOrigen == 0.0) return logIntensidadOrigen;
-    const double escala = desviacionPromedio * tasaAtenuacion;
-    if (!(escala > 0.0)) return -numeric_limits<double>::infinity();
-    return logIntensidadOrigen - distanciaAlOrigen / escala;
+double Arana::logIntensidadRecibida(double logOrigen, double d, double sigma, double ra) {
+    if (d == 0.0) return logOrigen;
+    const double base = sigma * ra;
+    if (!(base > 0.0)) return -std::numeric_limits<double>::infinity();
+    return logOrigen - d / base;
 }
 
-bool Arana::elegirVibracion(const vector<Vibracion>& vibraciones, const vector<double>& distancias,
-                            double desviacionPromedio, double tasaAtenuacion) {
+bool Arana::elegirVibracion(const std::vector<Vibracion>& v, const std::vector<double>& d, double sigma,
+                            double ra) {
     int elegida = -1;
-    double maxima = vibracionObjetivo.logIntensidad;
-    for (size_t i = 0; i < vibraciones.size(); ++i) {
-        if (vibraciones[i].origen == vibracionObjetivo.origen) continue;
-        const double recibida =
-            logIntensidadRecibida(vibraciones[i].logIntensidad, distancias[i], desviacionPromedio, tasaAtenuacion);
+    double maxima = objetivo.logIntensidad;
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        if (v[i].origen == objetivo.origen) continue;
+        const double recibida = logIntensidadRecibida(v[i].logIntensidad, d[i], sigma, ra);
         if (recibida > maxima) {
             elegida = static_cast<int>(i);
             maxima = recibida;
         }
     }
     if (elegida == -1) {
-        ++iteracionesSinCambio;
+        ++c;
         return false;
     }
-    vibracionObjetivo.logIntensidad = maxima;
-    vibracionObjetivo.origen = vibraciones[elegida].origen;
-    iteracionesSinCambio = 0;
+    objetivo.logIntensidad = maxima;
+    objetivo.origen = v[elegida].origen;
+    c = 0;
     return true;
 }
 
-bool Arana::cambiarMascara(double probCambioMascara, double probMascara, Aleatorio& azar) {
-    if (!(azar.uniforme() > pow(probCambioMascara, iteracionesSinCambio))) return false;
-    iteracionesSinCambio = 0;
-    const double probBit = probMascara * azar.uniforme();
-    for (auto& bit : mascara) bit = azar.uniforme() < probBit ? 1 : 0;
+bool Arana::cambiarMascara(double pc, double pm, Aleatorio& azar) {
+    if (!(azar.uniforme() > std::pow(pc, c))) return false;
+    c = 0;
+    const double p = pm * azar.uniforme();
+    for (auto& bit : mascara) bit = azar.uniforme() < p ? 1 : 0;
     return true;
 }
 
-double Arana::reflejar(double nuevoValor, double valorAnterior, double cota, Aleatorio& azar) {
-    if (nuevoValor >= 0.0 && nuevoValor <= cota) return nuevoValor;
-    if (!(cota > 0.0)) return 0.0;
-    const double reflejado = nuevoValor > cota ? (cota - valorAnterior) * azar.uniforme()
-                                               : valorAnterior * azar.uniforme();
-    return reflejado < 0.0 ? 0.0 : (reflejado > cota ? cota : reflejado);
+double Arana::reflejar(double x, double q0, double b, Aleatorio& azar) {
+    if (x >= 0.0 && x <= b) return x;
+    if (!(b > 0.0)) return 0.0;
+    const double y = x > b ? (b - q0) * azar.uniforme() : q0 * azar.uniforme();
+    return y < 0.0 ? 0.0 : (y > b ? b : y);
 }
 
-void Arana::caminar(const vector<Vibracion>& vibraciones, const vector<double>& dosisLimite, Aleatorio& azar) {
-    vector<double>& dosis = posicion.vectorDosis;
-    const int cantidadVibraciones = static_cast<int>(vibraciones.size());
-    for (size_t i = 0; i < dosis.size(); ++i) {
-        movimiento[i] *= azar.uniforme();
-        const double puntoAtraccion = mascara[i] ? vibraciones[azar.entero(cantidadVibraciones)].origen[i]
-                                                 : vibracionObjetivo.origen[i];
-        movimiento[i] += azar.uniforme() * (puntoAtraccion - dosis[i]);
-        const double dosisAnterior = dosis[i];
-        dosis[i] = reflejar(dosisAnterior + movimiento[i], dosisAnterior, dosisLimite[i], azar);
+void Arana::caminar(const std::vector<Vibracion>& v, const std::vector<double>& beta, Aleatorio& azar) {
+    std::vector<double>& q = posicion.q;
+    const int n = static_cast<int>(v.size());
+    for (std::size_t i = 0; i < q.size(); ++i) {
+        m[i] *= azar.uniforme();
+        const double p = mascara[i] ? v[azar.entero(n)].origen[i] : objetivo.origen[i];
+        m[i] += azar.uniforme() * (p - q[i]);
+        const double q0 = q[i];
+        q[i] = reflejar(q0 + m[i], q0, beta[i], azar);
     }
 }

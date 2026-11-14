@@ -1,27 +1,27 @@
+// Programa del módulo de ejecución automatizada (R6).
+//
+// Uso: ssa_basico <carpeta de la instancia> <parametros_ssa.csv> <salida.csv>
+// Ejemplo, desde la carpeta SSA_Basico:
+//   build/ssa_basico datos/completa datos/parametros_ssa.csv resultados.csv
+
 #include <cstdio>
 #include <exception>
-#include <string>
 
 #include "Instancia.h"
 #include "ModuloEjecucion.h"
 
-using namespace std;
-
 int main(int argc, char* argv[]) {
-    if (argc != 1 && argc != 4) {
-        fputs("Uso: ssa_basico [<carpeta de la instancia> <parametros_ssa.csv> <salida.csv>]\n", stderr);
+    if (argc != 4) {
+        std::fputs("Uso: ssa_basico <carpeta de la instancia> <parametros_ssa.csv> <salida.csv>\n", stderr);
         return 2;
     }
-    const string carpetaInstancia = argc == 4 ? argv[1] : string(DIR_DATOS) + "/completa";
-    const string archivoParametros = argc == 4 ? argv[2] : string(DIR_DATOS) + "/parametros_ssa.csv";
-    const string archivoSalida = argc == 4 ? argv[3] : string(DIR_DATOS) + "/resultados.csv";
     try {
-        const Instancia instancia = Instancia::leer(carpetaInstancia);
-        const ConfiguracionEjecucion configuracion = ModuloEjecucion::leerConfiguracion(archivoParametros);
-        ModuloEjecucion::ejecutar(instancia, configuracion, archivoSalida, stdout);
+        const Instancia instancia = Instancia::leer(argv[1]);
+        const ConfiguracionEjecucion configuracion = ModuloEjecucion::leerConfiguracion(argv[2]);
+        ModuloEjecucion::ejecutar(instancia, configuracion, argv[3], stdout);
         return 0;
-    } catch (const exception& error) {
-        fprintf(stderr, "Error: %s\n", error.what());
+    } catch (const std::exception& error) {
+        std::fprintf(stderr, "Error: %s\n", error.what());
         return 1;
     }
 }

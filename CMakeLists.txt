@@ -1,3 +1,7 @@
+# Versión básica del Algoritmo de Arañas Sociales: el programa (ssa_basico) y sus pruebas.
+#   cmake -S . -B build
+#   cmake --build build
+#   ctest --test-dir build
 cmake_minimum_required(VERSION 3.20)
 project(SSA_Basico LANGUAGES CXX)
 
@@ -8,6 +12,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# En Windows con MinGW: libgcc y libstdc++ van dentro del .exe, y la DLL de hilos se copia al lado.
 if(MINGW)
     add_link_options(-static-libgcc -static-libstdc++)
     get_filename_component(MINGW_BIN "${CMAKE_CXX_COMPILER}" DIRECTORY)
@@ -33,8 +38,6 @@ target_include_directories(algoritmo PUBLIC algoritmo)
 
 add_executable(ssa_basico algoritmo/main.cpp)
 target_link_libraries(ssa_basico PRIVATE algoritmo)
-# Carpeta datos/ del proyecto
-target_compile_definitions(ssa_basico PRIVATE DIR_DATOS="${CMAKE_SOURCE_DIR}/datos")
 copiar_dll_de_hilos(ssa_basico)
 
 # Pruebas con Google Test

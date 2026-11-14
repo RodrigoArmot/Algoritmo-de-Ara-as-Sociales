@@ -1,40 +1,38 @@
+// Solución candidata (R3): las dosis q_(f,s), en gramos, y su evaluación. El empleo z y la
+// selección y no se guardan: se deducen de las dosis, porque un fertilizante está empleado en una
+// etapa si su dosis es positiva y seleccionado si lo está en alguna etapa.
 #pragma once
 
 #include <vector>
 
 #include "Instancia.h"
 
-using namespace std;
-
 class Solucion {
 public:
     Solucion() = default;
-    explicit Solucion(const Instancia& instancia)
-        : vectorDosis(instancia.dimension(), 0.0), numEtapas_(instancia.numEtapas) {}
+    explicit Solucion(const Instancia& instancia) : q(instancia.dimension(), 0.0), S_(instancia.S) {}
 
-    double& dosis(int fertilizante, int etapa) { return vectorDosis[fertilizante * numEtapas_ + etapa]; }
-    double dosis(int fertilizante, int etapa) const { return vectorDosis[fertilizante * numEtapas_ + etapa]; }
+    double& dosis(int f, int s) { return q[f * S_ + s]; }
+    double dosis(int f, int s) const { return q[f * S_ + s]; }
 
-    bool seleccionado(int fertilizante) const {
-        for (int etapa = 0; etapa < numEtapas_; ++etapa)
-            if (vectorDosis[fertilizante * numEtapas_ + etapa] > 0.0) return true;
+    bool seleccionado(int f) const {
+        for (int s = 0; s < S_; ++s)
+            if (q[f * S_ + s] > 0.0) return true;
         return false;
     }
 
     int numSeleccionados() const {
-        int cantidad = 0;
-        for (int fertilizante = 0; numEtapas_ > 0 && fertilizante < static_cast<int>(vectorDosis.size()) / numEtapas_;
-             ++fertilizante)
-            cantidad += seleccionado(fertilizante);
-        return cantidad;
+        int n = 0;
+        for (int f = 0; S_ > 0 && f < static_cast<int>(q.size()) / S_; ++f) n += seleccionado(f);
+        return n;
     }
 
-    vector<double> vectorDosis;
-    double costo = 0.0;
-    double desviacion = 0.0;
-    double costoRelativo = 0.0;
-    double aptitud = 0.0;
+    std::vector<double> q;  // |F|·|S|, posición f·S + s
+    double costo = 0.0;     // USD
+    double D = 0.0;         // desviación del requerimiento nutricional
+    double K = 0.0;         // costo relativo, costo/Kref
+    double Z = 0.0;         // aptitud, γ·D + (1 − γ)·K
 
 private:
-    int numEtapas_ = 0;
+    int S_ = 0;
 };
