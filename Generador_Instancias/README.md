@@ -20,11 +20,21 @@ Generador_Instancias/
 │   ├── fallos.py            instancias que deben fallar, sus cotas y las entradas inválidas
 │   ├── evaluar.py           función objetivo y admisibilidad, igual que ssa_basico
 │   ├── exacto.py            óptimo exacto de cada instancia con HiGHS
+│   ├── ejecucion.py         ejecución de ssa_basico y del recocido, común a calibración y comparación
 │   └── verificar.py         las cinco comprobaciones del resultado
-└── instancias/              una carpeta por instancia, manifiesto.csv, referencias.csv e invalidas.csv
+├── calibracion/
+│   ├── calibrar.py          calibración de los parámetros de control (resultado 9) y su confirmación
+│   └── comprobar_calibracion.py   elección por mediana y valores más allá del borde de la rejilla
+├── experimentacion/
+│   ├── comparar.py          30 ejecuciones de cada algoritmo calibrado en experimentación y robustez (resultado 10)
+│   ├── analizar.py          normalidad, pruebas de comparación, tamaño del efecto y desglose por factor
+│   ├── medir_tiempos.py     tiempo por ejecución de cada algoritmo y del método exacto, en un hilo
+│   └── tablas.py            tablas del capítulo 7 y de los Anexos L, N y O (resultados/tablas_capitulo7.md)
+├── instancias/              una carpeta por instancia, manifiesto.csv, referencias.csv e invalidas.csv
+└── resultados/              calibracion/ y comparacion/: los datos de los resultados 9 y 10
 ```
 
-`instancias/` no se sube al repositorio (`.gitignore`): son unos 2300 archivos que salen del código. En un clon nuevo se crea con los pasos 1 y 2 de la sección 3, en unos 10 segundos, y queda idéntica byte a byte a la original; el paso 3 lo comprueba. `base/` sí se sube, porque es la entrada del generador y no se puede regenerar.
+`instancias/` y `resultados/` no se suben al repositorio (`.gitignore`): son miles de archivos que salen del código. En un clon nuevo se crea con los pasos 1 y 2 de la sección 3, en unos 10 segundos, y queda idéntica byte a byte a la original; el paso 3 lo comprueba. `base/` sí se sube, porque es la entrada del generador y no se puede regenerar.
 
 ## 2. Abrir en PyCharm
 
@@ -93,14 +103,73 @@ La cota de conductividad sustituye a la fórmula del 23/09 (`Diseno_Experimental
 - **Acierta:** la mejor solución tiene Z ≤ 0,5, es decir, un equilibrio entre desviación y costo al menos tan bueno como el de la generadora. La medida continua es la brecha a Z\*.
 - **Falla como debe:** D ≥ D_cota en cada repetición y Z ≥ cota inferior de Z\*. Todas las instancias de fallo tienen Z\* > 0,5 (la menor, 0,558), así que tampoco pueden acertar.
 
-## 8. Reproducibilidad
+## 8. Calibración (resultado 9)
+
+`calibracion/calibrar.py` calibra los parámetros de control de los dos algoritmos con las 78 instancias del conjunto de calibración: las 54 que deben acertar y las 24 que deben fallar.
+
+```
+.venv/Scripts/python calibracion/calibrar.py aranas      [--ssa-basico ruta]
+.venv/Scripts/python calibracion/calibrar.py recocido    [--formulacion ruta]
+.venv/Scripts/python calibracion/calibrar.py confirmar
+.venv/Scripts/python calibracion/comprobar_calibracion.py
+```
+
+- **Respuesta:** la brecha media al óptimo exacto, (Z − Z\*)/Z\*. La aptitud media de la calibración anterior ya no sirve, porque el Z\* de las instancias de fallo es varias veces el de las de acierto y dominaría el promedio. La brecha pone a todas en la misma escala.
+- **Procedimiento:** igual que antes. Se varía un parámetro a la vez desde la configuración vigente, con dos repeticiones por instancia y 30 000 evaluaciones de la función objetivo. Se elige el valor de menor brecha media y, ante un empate, se conserva el vigente. Las pasadas se repiten hasta que una completa no cambia nada.
+- **Confirmación:** compara la configuración de partida con la calibrada, con cuatro repeticiones por instancia y la prueba de rangos con signo de Wilcoxon sobre la brecha de cada instancia.
+- **Programas:** las arañas corren con `ssa_basico`, con iteraciones = 30 000 / población. El recocido corre con `formulacion recocido`, del proyecto completo (`Algoritmo de Arañas Sociales`), con I + 1 temperaturas de n candidatas. Hay que compilar `formulacion` en Release desde el código actual: la compilación de `cmake-build-release` del 2/10 es anterior a K = costo/Kref.
+- **Comprobaciones:** `comprobar_calibracion.py` mira si elegir por la mediana de la brecha, en lugar de por la media, cambia algún valor, y prueba valores más allá del borde de la rejilla cuando el elegido es un extremo.
+- **Salida:** `resultados/calibracion/<algoritmo>.json`, con la brecha, su error estándar, la tasa de acierto y las ejecuciones por debajo de la cota de cada valor en cada pasada; `confirmacion.txt` y `confirmacion.json`, y `comprobaciones.json`. Si se interrumpe, al volver a ejecutarlo retoma lo que falta.
+- **El recocido acepta solo mejoras.** Con esa configuración, n y p no cambian el resultado (dan la misma brecha con todos sus valores), y t_f casi no lo cambia.
+
+Resultado del 13/11/2026 (dos pasadas en cada algoritmo; arañas en 26 s y recocido en 14 s):
+
+| Algoritmo | Parámetro | Partida | Calibrado | Tabla 19 anterior |
+|---|---|---|---|---|
+| Arañas Sociales | población | 30 | 30 | 40 |
+| | r_a | 1 | 5 | 10 |
+| | p_c | 0,7 | 0,01 | 0,1 |
+| | p_m | 0,1 | 0,1 | 0,1 |
+| Recocido simulado | E_v | 0,15 | 0,10 | 0,10 |
+| | n | 500 | 500 | 500 |
+| | p | 0,95 | 0,95 | 0,95 |
+| | t_f | 10⁻⁵ | 10⁻⁵ | 10⁻⁵ |
+
+| Confirmación (4 repeticiones) | Brecha de partida | Brecha calibrada | Instancias que mejoran | Wilcoxon | Acierto |
+|---|---|---|---|---|---|
+| Arañas Sociales | 44,8 % | 41,4 % | 48 de 78 | p = 0,0034 | 78,2 % → 85,6 % |
+| Recocido simulado | 128,9 % | 120,7 % | 44 de 78 | p = 0,038 | 25,9 % → 28,7 % |
+
+En ninguna ejecución de la calibración ni de la confirmación bajó un algoritmo de la cota de su instancia. La brecha de cada valor tiene un error estándar de unos 8 puntos en las arañas y de unos 15 en el recocido, así que diferencias de pocas décimas, como la de r_a entre 1 y 5, quedan dentro del ruido.
+
+## 9. Comparación (resultado 10)
+
+```
+.venv/Scripts/python experimentacion/comparar.py       [--ssa-basico ruta] [--formulacion ruta]
+.venv/Scripts/python experimentacion/analizar.py
+.venv/Scripts/python experimentacion/medir_tiempos.py  [--ssa-basico ruta] [--formulacion ruta]
+.venv/Scripts/python experimentacion/tablas.py
+```
+
+- **Ejecuciones:** cada algoritmo, con la configuración calibrada que lee de `resultados/calibracion/`, corre 30 veces con 30 000 evaluaciones sobre las 243 instancias de experimentación y las 12 de robustez. El recocido sin activación de dosis corre además sobre las de experimentación. En total son 753 archivos de 30 ejecuciones, en unos 80 s.
+- **Pruebas según la naturaleza de los datos.** Las aptitudes están acotadas por el óptimo y son asimétricas.
+    - Normalidad: prueba de Shapiro-Wilk sobre las 30 aptitudes de cada instancia y algoritmo (α = 0,05, y también con Holm). Como la mayoría de las muestras la rechaza, todo lo demás es no paramétrico y se resume con mediana y rango intercuartílico.
+    - Por instancia (muestras independientes): prueba de Mann-Whitney con la corrección de Holm y α = 0,05, y tamaño del efecto A12 de Vargha y Delaney.
+    - Sobre el conjunto (pareado por instancia): prueba de Wilcoxon sobre las medianas por instancia, con la correlación biserial de rangos como tamaño del efecto.
+    - Efecto de los factores (diseño factorial): prueba de Friedman por factor, con bloques que reúnen las instancias que solo difieren en ese factor; W de Kendall y comparaciones por pares con Wilcoxon y Holm. En robustez, con dos niveles, Wilcoxon pareada.
+- **Calidad:** acierto (Z ≤ 0,5), brecha al óptimo absoluta (Z − Z\*) y relativa ((Z − Z\*)/Z\*), y ejecuciones que alcanzan el óptimo (Z − Z\* ≤ 10⁻³).
+- **Tiempos:** mediana por ejecución en un solo hilo, sobre las 27 instancias de experimentación con τ = 0,05 y primera repetición. El método exacto se mide resolviendo de nuevo las 255 instancias en copias temporales.
+- **Salida en `resultados/comparacion/`:** `<rama>/<instancia>.csv`, `configuraciones.json`, `experimentacion_por_instancia.csv`, `experimentacion_por_factor.csv`, `robustez_por_instancia.csv`, `robustez_por_factor.csv`, `activacion_por_instancia.csv`, `efecto_de_factores.csv`, `pruebas_estadisticas.csv`, `normalidad_por_muestra.csv`, `resumen.json` y `tiempos.json`.
+- **Tablas:** `tablas.py` reúne en `resultados/tablas_capitulo7.md` las Tablas 19, 20 y 21 y las de los Anexos L, N y O, en el formato de la tesis. Lee también `resultados/verificacion.json`, que escribe `generador/verificar.py`. En las columnas, A es la primera rama del contraste y B la segunda.
+
+## 10. Reproducibilidad
 
 - La semilla de cada instancia es el SHA-256 de la semilla maestra de su conjunto y de sus niveles. No se sortea, así que cada instancia se puede regenerar por separado y añadir niveles no cambia las existentes.
 - Con NumPy 2.3.5 y SciPy 1.16.3 (`requirements.txt`) la salida es idéntica byte a byte, y `verificar.py` lo comprueba. Con otras versiones, las últimas cifras pueden cambiar (del orden de 10⁻¹³ en términos relativos), aunque los catálogos y las generadoras salen iguales.
 - Los archivos se escriben en UTF-8 con fin de línea LF, sea cual sea el sistema.
 - Las 309 instancias de acierto son las mismas del proyecto completo (`Algoritmo de Arañas Sociales/herramientas/generador`): mismos catálogos, mismas generadoras y mismos Z\*, con una diferencia máxima de 5·10⁻¹⁶.
 
-## 9. Resultado de la verificación (13/11/2026)
+## 11. Resultado de la verificación (13/11/2026)
 
 `ssa_basico` en Release, con los parámetros de partida (población 30, r_a = 1, p_c = 0,7, p_m = 0,1, 1000 iteraciones) y 30 repeticiones:
 

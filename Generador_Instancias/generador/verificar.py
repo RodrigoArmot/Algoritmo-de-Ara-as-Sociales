@@ -14,10 +14,11 @@ Comprobaciones, cada una con su resultado:
 Uso (en PyCharm, ejecutar este archivo; o desde la carpeta del proyecto):
     .venv/Scripts/python generador/verificar.py [--binario ruta/ssa_basico] [--repeticiones 30] [--exacto]
 --exacto vuelve a resolver los óptimos antes de comprobarlos. Termina con «Todo se cumple.» y código 0
-si las cinco comprobaciones pasan.
+si las cinco comprobaciones pasan, y guarda las cifras en resultados/verificacion.json.
 """
 import argparse
 import filecmp
+import json
 import os
 import statistics
 import subprocess
@@ -192,15 +193,18 @@ def main():
     opciones = argumentos.parse_args()
     binario = opciones.binario or buscar_ssa_basico()
     todo_bien = True
+    resumen = {}
 
     carpetas, distintos = comprobar_reproducibilidad()
     print(f"1. Reproducibilidad: {carpetas} carpetas regeneradas; archivos distintos: {len(distintos)}")
     mostrar(distintos)
     todo_bien &= not distintos
+    resumen["reproducibilidad"] = dict(carpetas=carpetas, archivos_distintos=len(distintos))
 
     manifiesto = leer_csv(os.path.join(CARPETA_INSTANCIAS, "manifiesto.csv"))
     total, fallas = comprobar_generadoras(manifiesto)
     print(f"2. Generadoras: {total - len(fallas)} de {total} admisibles con D = 0 y Z = 0,5")
+    resumen["generadoras"] = dict(total=total, correctas=total - len(fallas))
     mostrar(fallas)
     todo_bien &= not fallas
 
@@ -212,6 +216,8 @@ def main():
     de_fallo = [fila for fila in referencias if fila["tipo"] == "fallo"]
     print(f"3. Óptimos exactos: {len(referencias) - len(fallas)} de {len(referencias)} correctos "
           f"(Z* ≤ 0,5 en las de acierto; D* ≥ D_cota en las {len(de_fallo)} de fallo)")
+    resumen["exactos"] = dict(total=len(referencias), correctos=len(referencias) - len(fallas), de_fallo=len(de_fallo),
+                              comparados_con_anteriores=comparadas, diferencia_maxima_con_anteriores=diferencia_maxima)
     if comparadas:
         print(f"   Frente a los {comparadas} óptimos anteriores de exp_ y rob_: diferencia máxima {diferencia_maxima:.1e}")
     mostrar(fallas)
@@ -223,13 +229,21 @@ def main():
     mostrar(fallas)
     todo_bien &= not fallas
     aciertos = informe["acierto"]
+    resumen["ssa_basico"] = dict(instancias=total, repeticiones=opciones.repeticiones, ejecuciones_bajo_cota=len(fallas),
+                                 por_caso={})
     if aciertos:
         con_acierto = sum(e["Z"] <= APTITUD_GENERADORA + 1e-12 for e in aciertos)
+        resumen["ssa_basico"]["por_caso"]["acierto"] = dict(
+            ejecuciones=len(aciertos), con_acierto=con_acierto, brecha_media=statistics.mean(e["brecha"] for e in aciertos))
         print(f"   Deben acertar: {con_acierto} de {len(aciertos)} ejecuciones con Z ≤ 0,5 "
               f"({100 * con_acierto / len(aciertos):.1f} %); brecha media a Z*: "
               f"{100 * statistics.mean(e['brecha'] for e in aciertos):.1f} %")
     for caso in sorted({e["caso"] for e in informe["fallo"]}):
         del_caso = [e for e in informe["fallo"] if e["caso"] == caso]
+        resumen["ssa_basico"]["por_caso"][caso] = dict(
+            ejecuciones=len(del_caso), D_minima=min(e["D"] for e in del_caso),
+            margen_minimo=min(e["margen"] for e in del_caso),
+            brecha_media=statistics.mean(e["brecha"] for e in del_caso))
         print(f"   Deben fallar, {caso}: D mínima {min(e['D'] for e in del_caso):.4f}, margen mínimo sobre "
               f"D_cota {min(e['margen'] for e in del_caso):.4f}; brecha media a Z* "
               f"{100 * statistics.mean(e['brecha'] for e in del_caso):.1f} %")
@@ -239,6 +253,12 @@ def main():
     mostrar(fallas)
     todo_bien &= not fallas
 
+    resumen["invalidas"] = dict(total=total, rechazadas_como_se_espera=total - len(fallas))
+    resumen["todo_se_cumple"] = bool(todo_bien)
+    carpeta_resultados = os.path.join(CARPETA_PROYECTO, "resultados")
+    os.makedirs(carpeta_resultados, exist_ok=True)
+    with open(os.path.join(carpeta_resultados, "verificacion.json"), "w", encoding="utf-8") as archivo:
+        json.dump(resumen, archivo, indent=1, ensure_ascii=False)
     print("Todo se cumple." if todo_bien else "HAY FALLAS.")
     return 0 if todo_bien else 1
 

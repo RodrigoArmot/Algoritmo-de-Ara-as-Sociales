@@ -2,5 +2,6 @@
 __pycache__/
 .idea/workspace.xml
 .idea/shelf/
-# Las instancias no se suben: se regeneran con generar.py y exacto.py, idénticas byte a byte.
+# Las instancias y los resultados no se suben: se regeneran con el código, idénticos.
 instancias/
+resultados/
