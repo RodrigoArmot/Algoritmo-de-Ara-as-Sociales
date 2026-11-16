@@ -144,7 +144,7 @@ La semilla de cada repetición se calcula a partir del nombre de la carpeta de l
 
 ## 8. Pruebas
 
-Son 18 pruebas de Google Test. Las de las clases del algoritmo son unitarias (R5); las del módulo de ejecución, de integración (R6).
+Son 36 pruebas de Google Test. Las de las clases del algoritmo son unitarias (R5); las del módulo de ejecución y del programa, unitarias y de integración (R6). En conjunto ejecutan todas las funciones y todas las líneas del código de `algoritmo/`, y todas sus ramas salvo tres que no pueden darse (el control de `Aleatorio::entero`, el desempate por índice cuando el índice es menor y la captura de una excepción ajena a `std::exception` en `main`).
 
 En CLion, elegir la configuración **All CTest** (o `pruebas`) y pulsar *Run*; la ventana de resultados marca cada prueba en verde o en rojo. Desde una terminal:
 
@@ -154,12 +154,15 @@ ctest --test-dir build
 
 | Clase | Pruebas | Qué comprueban |
 |---|:-:|---|
-| Instancia | 5 | lectura de la instancia completa; rechazo de una carpeta inexistente, de un archivo mal formado y de un límite inferior mayor que el superior; matriz de aporte unitario (0,1708 mg/L de N y 0,24429 de Ca por gramo de nitrato de calcio) |
+| Instancia | 9 | lectura de la instancia completa, con BOM, líneas en blanco y barra final en la ruta; rechazo de una carpeta inexistente, de un archivo vacío o mal formado, de una columna, clave o fila faltante, de números y enteros mal escritos, de una especie desconocida, de una etapa fuera de rango, de un límite inferior mayor que el superior, de un fertilizante que no aporta ninguna especie y de un agua que agota la conductividad; matriz de aporte unitario (0,1708 mg/L de N y 0,24429 de Ca por gramo de nitrato de calcio) |
+| Solucion | 1 | posición de cada dosis, empleo y número de fertilizantes seleccionados |
 | FuncionObjetivo | 2 | dosificación nula (D = D(0), costo cero, K = 0); la intensidad decrece cuando la aptitud crece |
-| OperadorReparacion | 3 | dominio disjunto de la dosis mínima; 200 posiciones al azar con todos los fertilizantes quedan admisibles; retira el fertilizante de menor aporte relativo |
-| AlgoritmoSSA | 2 | la posición inicial tiene k fertilizantes con dosis entre ε y β; la misma semilla repite la ejecución, otra semilla da otra, y la mejor solución es admisible |
-| Arana | 4 | adopta la vibración más intensa y descarta la de su objetivo; la máscara no cambia con el contador en cero; la reflexión devuelve la dosis al intervalo; la caminata queda entre cero y la cota de búsqueda |
-| ModuloEjecucion | 2 | lee los parámetros del algoritmo; escribe una fila admisible por repetición, y cada fila se repite por separado con la semilla que guarda |
+| OperadorReparacion | 6 | cota superior; dominio disjunto de la dosis mínima; escalado de la etapa que excede la conductividad; 200 posiciones al azar con todos los fertilizantes quedan admisibles; retira el fertilizante de menor aporte relativo; desempate por precio y por índice |
+| AlgoritmoSSA | 5 | la posición inicial tiene k fertilizantes (o todos, si hay menos) con dosis entre ε y β; rechazo de parámetros no positivos; distancia y promedio de las desviaciones; la misma semilla repite la ejecución, otra semilla da otra, y la mejor solución es admisible |
+| Arana | 7 | adopta la vibración más intensa y descarta la de su objetivo; intensidad recibida según la distancia; la máscara no cambia con el contador en cero y se regenera cuando crece; la reflexión devuelve la dosis al intervalo, también en los casos límite; la caminata queda entre cero y la cota de búsqueda |
+| Aleatorio | 1 | la misma semilla repite la secuencia; reales, enteros y muestras en su intervalo; semilla de cada repetición |
+| ModuloEjecucion | 4 | lee los parámetros del algoritmo y rechaza los inválidos; escribe una fila admisible por repetición, que se repite por separado con la semilla que guarda; tabla por pantalla y rechazo de una salida que no se puede crear |
+| Programa | 1 | códigos de salida de `ssa_basico`: 2 sin argumentos, 1 con una instancia inexistente y 0 con una ejecución correcta |
 
 ## 9. Mensajes de error frecuentes
 

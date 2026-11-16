@@ -51,7 +51,9 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(pruebas algoritmo/pruebas.cpp)
 target_link_libraries(pruebas PRIVATE algoritmo GTest::gtest_main)
-target_compile_definitions(pruebas PRIVATE CARPETA_DATOS="${CMAKE_SOURCE_DIR}/datos")
+target_compile_definitions(pruebas PRIVATE CARPETA_DATOS="${CMAKE_SOURCE_DIR}/datos"
+        PROGRAMA="$<TARGET_FILE:ssa_basico>")
+add_dependencies(pruebas ssa_basico)  # la prueba del programa lo ejecuta
 copiar_dll_de_hilos(pruebas)
 
 enable_testing()
