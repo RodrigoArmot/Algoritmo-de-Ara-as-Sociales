@@ -41,7 +41,7 @@ PARAMETROS_SSA = dict(poblacion=30, ra=1.0, pc=0.7, pm=0.1, iteraciones=1000)
 
 
 def buscar_ssa_basico():
-    """Busca el programa compilado al lado del proyecto: en Tesis/SSA_Basico o en la raíz del repositorio."""
+    """Busca el programa compilado al lado del proyecto, en SSA_Basico."""
     if os.environ.get("SSA_BASICO"):
         return os.environ["SSA_BASICO"]
     carpeta_superior = os.path.dirname(CARPETA_PROYECTO)
@@ -114,7 +114,9 @@ def comprobar_exactos(referencias):
     if os.path.isfile(EXACTOS_ANTERIORES):
         anteriores = {fila["instancia"]: float(fila["Z"]) for fila in leer_csv(EXACTOS_ANTERIORES)}
         for fila in referencias:
-            if fila["instancia"] in anteriores:
+            # Las instancias con agua de pozo no se comparan: su agua se corrigió el 14/11/2026 según el
+            # Cuadro 4 del CIHNM (2006), de modo que ya no son las del proyecto completo.
+            if fila["instancia"] in anteriores and "_cihnm_" not in fila["instancia"]:
                 comparadas += 1
                 diferencia = abs(float(fila["Z_exacto"]) - anteriores[fila["instancia"]])
                 diferencia_maxima = max(diferencia_maxima, diferencia)

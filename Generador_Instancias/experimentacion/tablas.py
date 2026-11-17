@@ -8,6 +8,7 @@ analizar.py y medir_tiempos.py.
 
 Uso: .venv/Scripts/python experimentacion/tablas.py
 """
+from decimal import ROUND_HALF_UP, Decimal
 import json
 import os
 import sys
@@ -38,7 +39,9 @@ NOMBRE_CONTRASTE = {"experimentacion": "Experimentación: SSA frente a SA", "rob
 # --- Formato ---
 
 def numero(valor, decimales=3):
-    return f"{valor:.{decimales}f}".replace(".", ",").replace("-", "−")
+    # Redondeo aritmético (el 5 final aumenta la cifra anterior): el formato de Python redondea 0,5625 a 0,562.
+    redondeado = Decimal(repr(float(valor))).quantize(Decimal(1).scaleb(-decimales), rounding=ROUND_HALF_UP)
+    return f"{redondeado:.{decimales}f}".replace(".", ",").replace("-", "−")
 
 
 def porcentaje(valor, decimales=1):
@@ -171,7 +174,7 @@ def tablas_calibracion():
     salida.append(tabla("Tabla N3. Confirmación de la calibración",
                         ["Algoritmo", "Brecha de partida", "Brecha calibrada", "Instancias en que mejora",
                          "Wilcoxon, p", "Ejecuciones con acierto"], filas,
-                        "Cuatro ejecuciones nuevas por instancia. Prueba de rangos con signo de Wilcoxon sobre la brecha "
+                        "Cuatro ejecuciones por instancia; dos repiten las semillas de la calibración. Prueba de rangos con signo de Wilcoxon sobre la brecha "
                         "de cada instancia. El acierto se cuenta en las 54 instancias que deben acertar."))
     comprobaciones = leer_json("calibracion", "comprobaciones.json")
     filas = []

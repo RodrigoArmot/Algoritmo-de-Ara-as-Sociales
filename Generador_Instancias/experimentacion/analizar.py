@@ -214,7 +214,7 @@ def efecto_de_factores(contraste, filas, factores):
             por_nivel = [np.array([bloque[nivel][respuesta] for bloque in bloques]) for nivel in niveles]
             base = dict(contraste=contraste, factor=factor, respuesta=respuesta, bloques=len(bloques),
                         niveles=" / ".join(f"{nivel:g}" if isinstance(nivel, float) else str(nivel) for nivel in niveles),
-                        medianas=" / ".join(f"{np.median(valores):.4g}" for valores in por_nivel))
+                        medianas=" / ".join(f"{np.median(valores):.6g}" for valores in por_nivel))
             if len(niveles) >= 3:
                 prueba = friedmanchisquare(*por_nivel)
                 w_kendall = float(prueba.statistic) / (len(bloques) * (len(niveles) - 1))

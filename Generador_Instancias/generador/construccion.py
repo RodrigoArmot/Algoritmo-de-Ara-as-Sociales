@@ -17,7 +17,9 @@ CARPETA_BASE = os.path.join(CARPETA_PROYECTO, "base")
 CARPETA_INSTANCIAS = os.path.join(CARPETA_PROYECTO, "instancias")
 
 # Agua de pozo de La Molina, Cuadro 4 del CIHNM (2006), en mg/L. Las demás especies valen cero.
-AGUA_POZO_CIHNM = {"Ca": 125.0, "Mg": 24.0, "Na": 27.6, "K": 3.90, "Cl": 106.5, "S": 42.0, "B": 0.30}
+# El cuadro da el nitrato en me/L (0,20) y no en mg/L: como nitrógeno nítrico son 0,20 mmol/L × 14,007 g/mol
+# = 2,80 mg/L. El azufre es el valor del cuadro para el sulfato, 41,6 mg/L.
+AGUA_POZO_CIHNM = {"Nnit": 2.80, "Ca": 125.0, "Mg": 24.0, "Na": 27.6, "K": 3.90, "Cl": 106.5, "S": 41.6, "B": 0.30}
 # Especies sin requerimiento: solo llevan cota superior, en mg/L (Tabla C2; Ferreira et al., 2018).
 COTA_SUPERIOR_SIN_REQUERIMIENTO = {"Na": 460.0, "Cl": 709.0}
 CONDUCTIVIDAD_MAXIMA = 2.5  # (E^max) dS/m

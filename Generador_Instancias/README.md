@@ -29,7 +29,8 @@ Generador_Instancias/
 │   ├── comparar.py          30 ejecuciones de cada algoritmo calibrado en experimentación y robustez (resultado 10)
 │   ├── analizar.py          normalidad, pruebas de comparación, tamaño del efecto y desglose por factor
 │   ├── medir_tiempos.py     tiempo por ejecución de cada algoritmo y del método exacto, en un hilo
-│   └── tablas.py            tablas del capítulo 7 y de los Anexos L, N y O (resultados/tablas_capitulo7.md)
+│   ├── tablas.py            tablas del capítulo 7 y de los Anexos L, N y O (resultados/tablas_capitulo7.md)
+│   └── figuras.py           figuras del capítulo 7 (calibración y brecha según el tamaño del catálogo)
 ├── instancias/              una carpeta por instancia, manifiesto.csv, referencias.csv e invalidas.csv
 └── resultados/              calibracion/ y comparacion/: los datos de los resultados 9 y 10
 ```
@@ -55,7 +56,7 @@ Desde una terminal, en la carpeta del proyecto: `.venv/Scripts/python generador/
 | 2 | `exacto.py` | Resuelve el óptimo exacto de las 334 instancias ejecutables y escribe `exacta.csv` en cada una y `referencias.csv` | 3 s |
 | 3 | `verificar.py` | Hace las cinco comprobaciones; necesita `ssa_basico` compilado | 25 s |
 
-`verificar.py` busca `ssa_basico` en `../SSA_Basico/cmake-build-release`, `build` o `cmake-build-debug`, o en esas mismas carpetas al lado del proyecto, como en el repositorio. También se puede indicar con `--binario ruta/ssa_basico.exe`. Conviene compilarlo en Release. Otras opciones: `--repeticiones 30` y `--exacto`, que vuelve a resolver los óptimos antes de comprobarlos.
+`verificar.py` busca `ssa_basico` en `../SSA_Basico/cmake-build-release`, `build` o `cmake-build-debug`, al lado de esta carpeta, como en el repositorio. También se puede indicar con `--binario ruta/ssa_basico.exe`. Conviene compilarlo en Release. Otras opciones: `--repeticiones 30` y `--exacto`, que vuelve a resolver los óptimos antes de comprobarlos.
 
 ## 4. Conjuntos
 
@@ -167,9 +168,9 @@ En ninguna ejecución de la calibración ni de la confirmación bajó un algorit
 - La semilla de cada instancia es el SHA-256 de la semilla maestra de su conjunto y de sus niveles. No se sortea, así que cada instancia se puede regenerar por separado y añadir niveles no cambia las existentes.
 - Con NumPy 2.3.5 y SciPy 1.16.3 (`requirements.txt`) la salida es idéntica byte a byte, y `verificar.py` lo comprueba. Con otras versiones, las últimas cifras pueden cambiar (del orden de 10⁻¹³ en términos relativos), aunque los catálogos y las generadoras salen iguales.
 - Los archivos se escriben en UTF-8 con fin de línea LF, sea cual sea el sistema.
-- Las 309 instancias de acierto son las mismas del proyecto completo (`Algoritmo de Arañas Sociales/herramientas/generador`): mismos catálogos, mismas generadoras y mismos Z\*, con una diferencia máxima de 5·10⁻¹⁶.
+- De las 309 instancias de acierto, las 303 con agua destilada son las mismas del proyecto completo (`Algoritmo de Arañas Sociales/herramientas/generador`): mismos catálogos, mismas generadoras y mismos Z\*, con una diferencia máxima de 5·10⁻¹⁶. Las 6 de robustez con agua de pozo cambiaron el 14/11/2026, al corregir el agua según el Cuadro 4 del CIHNM (2006): azufre 41,6 mg/L y nitrógeno nítrico 2,80 mg/L.
 
-## 11. Resultado de la verificación (13/11/2026)
+## 11. Resultado de la verificación (17/11/2026)
 
 `ssa_basico` en Release, con los parámetros de partida (población 30, r_a = 1, p_c = 0,7, p_m = 0,1, 1000 iteraciones) y 30 repeticiones:
 
