@@ -66,3 +66,11 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Entorno local (no forma parte del código)
+.claude/
+.idea/
+cmake-build-*/
+
+# Salidas de ejecución
+resultados.csv

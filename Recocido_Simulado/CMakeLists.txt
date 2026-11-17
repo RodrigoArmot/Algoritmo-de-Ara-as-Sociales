@@ -6,7 +6,6 @@ add_library(barrido STATIC
     barrido/ConfiguracionBarrido.cpp
     barrido/Criterio.cpp
     barrido/EjecutorBarrido.cpp
-    barrido/InformeBarrido.cpp
     barrido/ResumenBarrido.cpp
 )
 target_link_libraries(barrido PUBLIC recocido)
