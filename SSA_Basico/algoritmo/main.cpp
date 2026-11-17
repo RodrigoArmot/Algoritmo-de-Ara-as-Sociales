@@ -1,9 +1,3 @@
-// Programa del módulo de ejecución automatizada (R6).
-//
-// Uso: ssa_basico <carpeta de la instancia> <parametros_ssa.csv> <salida.csv>
-// Ejemplo, desde la carpeta SSA_Basico:
-//   build/ssa_basico datos/completa datos/parametros_ssa.csv resultados.csv
-
 #include <cstdio>
 #include <exception>
 

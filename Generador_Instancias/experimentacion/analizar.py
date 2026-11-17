@@ -1,39 +1,3 @@
-"""Análisis estadístico de la comparación (resultado 10, capítulo 7).
-
-Las pruebas se eligen según la naturaleza de los datos:
-
-  Normalidad. Prueba de Shapiro-Wilk sobre las 30 aptitudes de cada instancia y algoritmo (α = 0,05, y
-  también con la corrección de Holm). Las aptitudes están acotadas por abajo por el óptimo y son
-  asimétricas; si la mayoría de las muestras rechaza la normalidad, se usan pruebas no paramétricas y se
-  resumen con mediana y rango intercuartílico.
-
-  Por instancia (muestras independientes de 30 ejecuciones). Prueba de suma de rangos de Mann-Whitney,
-  con la corrección de Holm (1979) sobre las instancias del conjunto y α = 0,05, y tamaño del efecto A12
-  de Vargha y Delaney (2000): probabilidad de que una ejecución del primer algoritmo dé menor aptitud que
-  una del segundo.
-
-  Sobre el conjunto (muestras pareadas por instancia). Prueba de rangos con signo de Wilcoxon sobre las
-  medianas por instancia (Derrac et al., 2011), con la correlación biserial de rangos como tamaño del
-  efecto.
-
-  Efecto de los factores (diseño factorial). Para cada factor de tres niveles, prueba de Friedman con
-  bloques formados por los niveles de los demás factores y la repetición, de modo que cada bloque reúne
-  instancias que solo difieren en ese factor; tamaño del efecto W de Kendall y comparaciones por pares
-  con la prueba de Wilcoxon y la corrección de Holm. En robustez, los factores tienen dos niveles y se
-  comparan con la prueba de Wilcoxon pareada por bloque. La respuesta es la brecha relativa mediana de
-  cada algoritmo y el A12 de cada instancia.
-
-Calidad frente a dos referencias: acierto si Z ≤ 0,5 (iguala o mejora la formulación generadora), y
-brecha frente al óptimo exacto Z*, absoluta (Z − Z*) y relativa ((Z − Z*)/Z*). Una ejecución alcanza el
-óptimo si Z − Z* ≤ 10⁻³, la resolución de las aptitudes que se reportan con tres decimales; también se
-informa con 10⁻⁴ y 10⁻² para ver cuánto depende de ese umbral.
-
-Uso: .venv/Scripts/python experimentacion/analizar.py
-Lee resultados/comparacion e instancias/referencias.csv; escribe en resultados/comparacion, para cada
-contraste, un CSV por instancia y otro por nivel de cada factor, efecto_de_factores.csv,
-pruebas_estadisticas.csv, normalidad_por_muestra.csv y resumen.json. En las columnas, A es la primera rama
-del contraste y B la segunda (resumen.json dice cuál es cuál).
-"""
 import itertools
 import json
 import os
@@ -46,8 +10,8 @@ from scipy.stats import friedmanchisquare, mannwhitneyu, rankdata, shapiro, wilc
 CARPETA_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(CARPETA_PROYECTO, "generador"))
 
-from construccion import CARPETA_INSTANCIAS, escribir_csv, leer_csv  # noqa: E402
-from ejecucion import COLUMNA_APTITUD, COLUMNA_COSTO, COLUMNA_DESVIACION  # noqa: E402
+from construccion import CARPETA_INSTANCIAS, escribir_csv, leer_csv
+from ejecucion import COLUMNA_APTITUD, COLUMNA_COSTO, COLUMNA_DESVIACION
 
 CARPETA_RESULTADOS = os.path.join(CARPETA_PROYECTO, "resultados", "comparacion")
 ALFA = 0.05
@@ -66,7 +30,6 @@ RESPUESTAS_POR_FACTOR = ("brecha_relativa_A", "brecha_relativa_B", "A12")
 # --- Lectura ---
 
 def leer_ejecuciones(rama, instancia):
-    """Aptitud, desviación y costo de las 30 ejecuciones de una rama en una instancia."""
     algoritmo = ALGORITMO_DE_RAMA[rama]
     filas = leer_csv(os.path.join(CARPETA_RESULTADOS, rama, instancia + ".csv"))
     return tuple(np.array([float(fila[columna[algoritmo]]) for fila in filas])
@@ -87,15 +50,12 @@ def correccion_de_holm(valores_p):
 
 
 def efecto_a12(aptitudes_a, aptitudes_b):
-    """Probabilidad de que una ejecución de A dé menor aptitud que una de B (los empates cuentan la mitad)."""
     a = np.asarray(aptitudes_a)[:, None]
     b = np.asarray(aptitudes_b)[None, :]
     return float(np.mean(a < b) + 0.5 * np.mean(a == b))
 
 
 def biserial_de_rangos(valores_a, valores_b):
-    """Correlación biserial de rangos de la prueba de Wilcoxon pareada: (T⁺ − T⁻)/(T⁺ + T⁻), con las
-    diferencias A − B. Negativa = A menor que B."""
     diferencias = np.asarray(valores_a) - np.asarray(valores_b)
     diferencias = diferencias[diferencias != 0]
     if len(diferencias) == 0:
@@ -195,8 +155,6 @@ def resumir_por_factor(filas, factores):
 # --- Efecto de los factores ---
 
 def bloques_de(filas, factor, factores):
-    """Agrupa las instancias que solo difieren en `factor`: un bloque por cada combinación de los demás
-    factores y la repetición. Devuelve los niveles y, por bloque, la fila de cada nivel."""
     otros = [f for f in factores if f != factor]
     niveles = sorted({fila[factor] for fila in filas})
     bloques = {}
@@ -236,8 +194,6 @@ def efecto_de_factores(contraste, filas, factores):
 # --- Normalidad ---
 
 def probar_normalidad(instancias_por_rama):
-    """Shapiro-Wilk sobre las 30 aptitudes de cada instancia y rama. Una muestra con todas sus aptitudes
-    iguales no se puede evaluar y se cuenta aparte."""
     filas = []
     for rama, instancias in instancias_por_rama.items():
         for instancia in instancias:
@@ -289,7 +245,6 @@ def escribir_filas(nombre, filas):
 
 
 def tabla_de_pruebas(informe):
-    """Una fila por prueba de conjunto, para el anexo de resultados."""
     filas = []
     for nombre, contraste in informe["contrastes"].items():
         resumen = contraste["resumen"]

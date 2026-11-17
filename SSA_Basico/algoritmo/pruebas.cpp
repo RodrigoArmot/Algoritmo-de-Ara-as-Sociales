@@ -1,6 +1,3 @@
-// Pruebas unitarias (R5) y de integración (R6) con Google Test.
-// CARPETA_DATOS y PROGRAMA las define CMake: la carpeta datos/ del proyecto y el ejecutable ssa_basico.
-
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -57,8 +54,6 @@ double alfa(const Instancia& I, int f, int e) {
     return 0.0;
 }
 
-// Admisible: a lo más k fertilizantes, cada dosis es cero o está entre ε y δ, y ninguna etapa
-// supera el límite de la suma equivalente de cationes.
 ::testing::AssertionResult admisible(const Instancia& I, const Solucion& x) {
     if (x.numSeleccionados() > I.k) return ::testing::AssertionFailure() << "más de k fertilizantes";
     for (int f = 0; f < I.F; ++f)
@@ -73,7 +68,6 @@ double alfa(const Instancia& I, int f, int e) {
     return ::testing::AssertionSuccess();
 }
 
-// Copia la instancia completa en una carpeta temporal para alterar uno de sus archivos.
 fs::path copiaTemporal(const std::string& nombre) {
     const fs::path destino = fs::temp_directory_path() / ("ssa_basico_" + nombre);
     fs::remove_all(destino);
@@ -86,9 +80,6 @@ void anadirLinea(const fs::path& archivo, const std::string& linea) {
     std::ofstream(archivo, std::ios::app) << linea << '\n';
 }
 
-
-// Reemplaza en un archivo el primer texto dado. Los CSV pueden tener fin de línea CRLF, por eso no se
-// incluye el salto de línea en el texto buscado.
 void reemplazar(const fs::path& archivo, const std::string& original, const std::string& nuevo) {
     std::ifstream entrada(archivo, std::ios::binary);
     std::stringstream texto;
@@ -101,7 +92,6 @@ void reemplazar(const fs::path& archivo, const std::string& original, const std:
     std::ofstream(archivo, std::ios::binary) << contenido;
 }
 
-// Comprueba que la instancia completa, alterada por un único reemplazo, se rechaza al leerla.
 void rechazaConCambio(const std::string& nombre, const std::string& archivo, const std::string& original,
                       const std::string& nuevo) {
     const fs::path carpeta = copiaTemporal(nombre);
@@ -110,14 +100,12 @@ void rechazaConCambio(const std::string& nombre, const std::string& archivo, con
     fs::remove_all(carpeta);
 }
 
-// Fila de fertilizantes.csv con la composición del nitrato de potasio.
 std::string filaNitratoDePotasio(const std::string& nombre, double precio, double delta) {
     std::ostringstream fila;
     fila << nombre << ",KNO3,101.1," << precio << ",0.05," << delta << ",1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0";
     return fila.str();
 }
 
-// Instancia mínima: especies, límites y agua de la completa, y los fertilizantes dados.
 fs::path instanciaMinima(const std::string& nombre, int k, const std::vector<std::string>& fertilizantes) {
     const fs::path carpeta = copiaTemporal(nombre);
     std::ofstream(carpeta / "parametros.csv") << "clave,valor\netapas,3\nV,1000.0\nEmax,2.5\nk," << k
@@ -128,7 +116,6 @@ fs::path instanciaMinima(const std::string& nombre, int k, const std::vector<std
     return carpeta;
 }
 
-// Ejecuta el programa ssa_basico con los argumentos dados y devuelve su código de salida.
 int ejecutarPrograma(const std::string& argumentos) {
     std::string orden = "\"" + std::string(PROGRAMA) + "\"" + argumentos;
 #ifdef _WIN32
@@ -143,7 +130,7 @@ int ejecutarPrograma(const std::string& argumentos) {
 
 }  // namespace
 
-// ---------------------------------------------------------------------------------- Instancia
+// TEST Instancias
 TEST(Instancia, LeeLaInstanciaCompleta) {
     const Instancia& I = completa();
     EXPECT_EQ(I.F, 54);
@@ -179,7 +166,6 @@ TEST(Instancia, RechazaUnLimiteInferiorMayorQueElSuperior) {
     fs::remove_all(carpeta);
 }
 
-// Ecuación (2): 1 g de nitrato de calcio en 1000 L aporta 0,1708 mg/L de N nítrico y 0,24429 de Ca.
 TEST(Instancia, MatrizDeAporteUnitario) {
     const Instancia& I = completa();
     const int f = fertilizante(I, "Calciumnitrate");
@@ -190,52 +176,52 @@ TEST(Instancia, MatrizDeAporteUnitario) {
 
 TEST(Instancia, AceptaVariantesDeFormato) {
     const fs::path carpeta = copiaTemporal("formato");
-    reemplazar(carpeta / "parametros.csv", "clave,valor", "\xEF\xBB\xBF" "clave , valor");  // BOM y espacios
-    anadirLinea(carpeta / "especies.csv", "   ");                                       // línea en blanco
-    const Instancia I = Instancia::leer(carpeta.string() + "/");                          // barra final
+    reemplazar(carpeta / "parametros.csv", "clave,valor", "\xEF\xBB\xBF" "clave , valor");
+    anadirLinea(carpeta / "especies.csv", "   ");
+    const Instancia I = Instancia::leer(carpeta.string() + "/");
     EXPECT_EQ(I.nombre, "ssa_basico_formato");
-    EXPECT_EQ(Instancia::leer(carpeta.string() + "\\").nombre, "ssa_basico_formato");      // barra invertida
+    EXPECT_EQ(Instancia::leer(carpeta.string() + "\\").nombre, "ssa_basico_formato");
     EXPECT_EQ(I.F, 54);
     EXPECT_EQ(I.E, 16);
     fs::remove_all(carpeta);
 }
 
 TEST(Instancia, RechazaArchivosIncompletos) {
-    EXPECT_THROW(Instancia::leer(""), std::runtime_error);                                 // ruta vacía
+    EXPECT_THROW(Instancia::leer(""), std::runtime_error);
     {
         const fs::path carpeta = copiaTemporal("vacio2");
-        std::ofstream(carpeta / "agua.csv", std::ios::trunc);                              // archivo vacío
+        std::ofstream(carpeta / "agua.csv", std::ios::trunc);
         EXPECT_THROW(Instancia::leer(carpeta.string()), std::runtime_error);
         fs::remove_all(carpeta);
     }
-    rechazaConCambio("columna", "especies.csv", "peso_atomico", "peso");                   // falta una columna
-    rechazaConCambio("clave", "parametros.csv", "gamma,0.5", "");                          // falta una clave
-    rechazaConCambio("filas", "limites.csv", "Na,3,0.0,460.0", "");                        // falta una fila
+    rechazaConCambio("columna", "especies.csv", "peso_atomico", "peso");
+    rechazaConCambio("clave", "parametros.csv", "gamma,0.5", "");
+    rechazaConCambio("filas", "limites.csv", "Na,3,0.0,460.0", "");
 }
 
 TEST(Instancia, RechazaValoresInvalidos) {
-    rechazaConCambio("real", "parametros.csv", "V,1000.0", "V,mil");                       // no es un número
-    rechazaConCambio("real2", "parametros.csv", "V,1000.0", "V,1000x");                    // número incompleto
-    rechazaConCambio("real3", "parametros.csv", "V,1000.0", "V,");                         // valor vacío
-    rechazaConCambio("entero", "parametros.csv", "etapas,3", "etapas,3.5");                // no es un entero
+    rechazaConCambio("real", "parametros.csv", "V,1000.0", "V,mil");
+    rechazaConCambio("real2", "parametros.csv", "V,1000.0", "V,1000x");
+    rechazaConCambio("real3", "parametros.csv", "V,1000.0", "V,");
+    rechazaConCambio("entero", "parametros.csv", "etapas,3", "etapas,3.5");
     rechazaConCambio("entero2", "parametros.csv", "etapas,3", "etapas,tres");
     rechazaConCambio("entero3", "parametros.csv", "etapas,3", "etapas,");
-    rechazaConCambio("especie", "agua.csv", "Nnit,0.0", "Xx,0.0");                         // especie desconocida
-    rechazaConCambio("etapa", "limites.csv", "Nnit,1,100.0,100.0", "Nnit,4,100.0,100.0");  // etapa fuera de rango
+    rechazaConCambio("especie", "agua.csv", "Nnit,0.0", "Xx,0.0");
+    rechazaConCambio("etapa", "limites.csv", "Nnit,1,100.0,100.0", "Nnit,4,100.0,100.0");
     rechazaConCambio("etapa0", "limites.csv", "Nnit,1,100.0,100.0", "Nnit,0,100.0,100.0");
 }
 
 TEST(Instancia, RechazaInstanciasInconsistentes) {
     {
-        const fs::path carpeta = copiaTemporal("inerte");                                  // no aporta ninguna especie
+        const fs::path carpeta = copiaTemporal("inerte");
         anadirLinea(carpeta / "fertilizantes.csv", "Inerte,X,100.0,1.0,0.05,110000.0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0");
         EXPECT_THROW(Instancia::leer(carpeta.string()), std::runtime_error);
         fs::remove_all(carpeta);
     }
-    rechazaConCambio("agua", "agua.csv", "K,0.0", "K,10000.0");                            // el agua agota el límite
+    rechazaConCambio("agua", "agua.csv", "K,0.0", "K,10000.0");
 }
 
-// ------------------------------------------------------------------------------------ Solucion
+// TEST Solucion
 TEST(Solucion, DosisEmpleoYSeleccion) {
     const Instancia& I = completa();
     Solucion x(I);
@@ -248,10 +234,10 @@ TEST(Solucion, DosisEmpleoYSeleccion) {
     EXPECT_TRUE(x.seleccionado(2));
     EXPECT_FALSE(x.seleccionado(3));
     EXPECT_EQ(x.numSeleccionados(), 1);
-    EXPECT_EQ(Solucion().numSeleccionados(), 0);  // sin instancia: ninguna etapa
+    EXPECT_EQ(Solucion().numSeleccionados(), 0);
 }
 
-// ---------------------------------------------------------------------------- FuncionObjetivo
+// TEST FuncionObjetivo
 TEST(FuncionObjetivo, DosificacionNula) {
     const Instancia& I = completa();
     Solucion x(I);
@@ -269,15 +255,15 @@ TEST(FuncionObjetivo, LaIntensidadDecreceConLaAptitud) {
     EXPECT_TRUE(std::isfinite(FuncionObjetivo::logIntensidad(-0.99)));
 }
 
-// ------------------------------------------------------------------------- OperadorReparacion
+// TEST OperadorReparacion
 TEST(OperadorReparacion, DominioDisjuntoDeLaDosisMinima) {
     const Instancia& I = completa();
     const int f = fertilizante(I, "Calciumnitrate");
     const double eps = I.fertilizantes[f].epsilon;
     Solucion x(I);
-    x.dosis(f, 0) = 0.4 * eps;  // menos de la mitad: pasa a cero
-    x.dosis(f, 1) = 0.6 * eps;  // la mitad o más: sube a ε
-    x.dosis(f, 2) = 2.0 * eps;  // ya admisible: no cambia
+    x.dosis(f, 0) = 0.4 * eps;
+    x.dosis(f, 1) = 0.6 * eps;
+    x.dosis(f, 2) = 2.0 * eps;
     OperadorReparacion(I).reparar(x);
     EXPECT_EQ(x.dosis(f, 0), 0.0);
     EXPECT_EQ(x.dosis(f, 1), eps);
@@ -300,7 +286,6 @@ TEST(OperadorReparacion, DejaAdmisiblesPosicionesConTodosLosFertilizantes) {
 TEST(OperadorReparacion, RetiraElDeMenorAporteRelativo) {
     const Instancia& I = completa();
     const OperadorReparacion rep(I);
-    // Un gramo de los k + 1 primeros fertilizantes con aporte relativo distinto de cero.
     Solucion x(I);
     std::vector<int> elegidos;
     for (int f = 0; f < I.F && static_cast<int>(elegidos.size()) <= I.k; ++f) {
@@ -312,13 +297,13 @@ TEST(OperadorReparacion, RetiraElDeMenorAporteRelativo) {
         }
     }
     ASSERT_EQ(static_cast<int>(elegidos.size()), I.k + 1);
-    ASSERT_LE(rep.sumaCationes(x, 0), I.L);  // la conductividad no interviene
+    ASSERT_LE(rep.sumaCationes(x, 0), I.L);
     int menor = elegidos[0];
     for (int f : elegidos)
         if (rep.aporteRelativo(x, f) < rep.aporteRelativo(x, menor)) menor = f;
     for (int f : elegidos) {
         if (f != menor) {
-            ASSERT_NE(rep.aporteRelativo(x, f), rep.aporteRelativo(x, menor));  // sin empates
+            ASSERT_NE(rep.aporteRelativo(x, f), rep.aporteRelativo(x, menor));
         }
     }
     rep.reparar(x);
@@ -342,7 +327,7 @@ TEST(OperadorReparacion, EscalaLaEtapaQueExcedeLaConductividad) {
     const int ca = fertilizante(I, "Calciumnitrate"), k = fertilizante(I, "Potassiumnitrate");
     Solucion x(I);
     x.dosis(ca, 0) = 20000.0;
-    x.dosis(k, 0) = 0.5;   // tras el escalado queda por debajo de ε y se anula
+    x.dosis(k, 0) = 0.5;
     x.dosis(ca, 1) = 100.0;
     const double lambda = I.L / rep.sumaCationes(x, 0);
     ASSERT_LT(lambda, 1.0);
@@ -350,19 +335,18 @@ TEST(OperadorReparacion, EscalaLaEtapaQueExcedeLaConductividad) {
     rep.reparar(x);
     EXPECT_NEAR(x.dosis(ca, 0), 20000.0 * lambda, 1e-9);
     EXPECT_EQ(x.dosis(k, 0), 0.0);
-    EXPECT_EQ(x.dosis(ca, 1), 100.0);  // la etapa que no excede no cambia
+    EXPECT_EQ(x.dosis(ca, 1), 100.0);
     EXPECT_LE(rep.sumaCationes(x, 0), I.L + 1e-9);
 }
 
 TEST(OperadorReparacion, DesempataPorPrecioYPorIndice) {
-    // Dos fertilizantes de igual composición y dosis tienen el mismo aporte relativo.
     const fs::path a = instanciaMinima("precio", 1, {filaNitratoDePotasio("Barato", 5.0, 110000.0),
                                                      filaNitratoDePotasio("Caro", 6.0, 110000.0)});
     const Instancia I = Instancia::leer(a.string());
     Solucion x(I);
     x.dosis(0, 0) = x.dosis(1, 0) = 1.0;
     OperadorReparacion(I).reparar(x);
-    EXPECT_TRUE(x.seleccionado(0));   // se retira el más caro
+    EXPECT_TRUE(x.seleccionado(0));
     EXPECT_FALSE(x.seleccionado(1));
     fs::remove_all(a);
 
@@ -372,7 +356,7 @@ TEST(OperadorReparacion, DesempataPorPrecioYPorIndice) {
     Solucion z(K);
     z.dosis(0, 0) = z.dosis(1, 0) = 1.0;
     OperadorReparacion(K).reparar(z);
-    EXPECT_FALSE(z.seleccionado(0));  // también si el más caro va primero
+    EXPECT_FALSE(z.seleccionado(0));
     EXPECT_TRUE(z.seleccionado(1));
     fs::remove_all(c);
 
@@ -382,12 +366,12 @@ TEST(OperadorReparacion, DesempataPorPrecioYPorIndice) {
     Solucion y(J);
     y.dosis(0, 0) = y.dosis(1, 0) = 1.0;
     OperadorReparacion(J).reparar(y);
-    EXPECT_TRUE(y.seleccionado(0));   // con igual precio, se retira el de mayor índice
+    EXPECT_TRUE(y.seleccionado(0));
     EXPECT_FALSE(y.seleccionado(1));
     fs::remove_all(b);
 }
 
-// ------------------------------------------------------------------------------ AlgoritmoSSA
+// TEST AlgoritmoSSA
 TEST(AlgoritmoSSA, PosicionInicialConKFertilizantesEntreEpsilonYBeta) {
     const Instancia& I = completa();
     const AlgoritmoSSA ssa(I, ParametrosSSA{});
@@ -429,28 +413,26 @@ TEST(AlgoritmoSSA, DistanciaYPromedioDeDesviaciones) {
     std::vector<Vibracion> v(2);
     v[0].origen = {0.0, 0.0};
     v[1].origen = {2.0, 4.0};
-    EXPECT_DOUBLE_EQ(AlgoritmoSSA::promedioDesviaciones(v), 1.5);  // (1 + 2) / 2
+    EXPECT_DOUBLE_EQ(AlgoritmoSSA::promedioDesviaciones(v), 1.5);
 }
 
-// --------------------------------------------------------------------------------------- Arana
+// TEST Arana
 TEST(Arana, AdoptaLaVibracionMasIntensaYDescartaLaDeSuObjetivo) {
     Solucion x;
     x.q = {0.0, 0.0};
     Arana arana(x);
     std::vector<Vibracion> v(3);
-    v[0].origen = {0.0, 0.0};  // la suya: procede de su objetivo y se descarta
+    v[0].origen = {0.0, 0.0};
     v[0].logIntensidad = -1.0;
     v[1].origen = {1.0, 0.0};
     v[1].logIntensidad = -2.0;
     v[2].origen = {5.0, 0.0};
     v[2].logIntensidad = -1.5;
     const std::vector<double> d = {0.0, 1.0, 5.0};
-    // Recibidas con σ = 1 y ra = 1: −3 y −6,5. Gana la segunda.
     EXPECT_TRUE(arana.elegirVibracion(v, d, 1.0, 1.0));
     EXPECT_EQ(arana.objetivo.origen, v[1].origen);
     EXPECT_DOUBLE_EQ(arana.objetivo.logIntensidad, -3.0);
     EXPECT_EQ(arana.c, 0);
-    // Si ninguna la supera, conserva su objetivo y el contador aumenta.
     arana.objetivo.logIntensidad = 0.0;
     EXPECT_FALSE(arana.elegirVibracion(v, d, 1.0, 1.0));
     EXPECT_EQ(arana.c, 1);
@@ -466,7 +448,7 @@ TEST(Arana, LaMascaraNoCambiaConElContadorEnCero) {
 
 TEST(Arana, LaReflexionDevuelveLaDosisAlIntervalo) {
     Aleatorio azar(5);
-    EXPECT_EQ(Arana::reflejar(3.0, 2.0, 10.0, azar), 3.0);  // dentro: no cambia
+    EXPECT_EQ(Arana::reflejar(3.0, 2.0, 10.0, azar), 3.0);
     for (int i = 0; i < 100; ++i) {
         const double arriba = Arana::reflejar(15.0, 8.0, 10.0, azar);
         const double abajo = Arana::reflejar(-4.0, 1.0, 10.0, azar);
@@ -485,7 +467,7 @@ TEST(Arana, LaCaminataQuedaEntreCeroYLaCotaDeBusqueda) {
     for (auto& vib : v) vib.origen = ssa.posicionInicial(azar).q;
     Arana arana(ssa.posicionInicial(azar));
     arana.objetivo.origen = v[0].origen;
-    arana.mascara.assign(arana.mascara.size(), 1);  // también sigue a arañas al azar
+    arana.mascara.assign(arana.mascara.size(), 1);
     for (int paso = 0; paso < 20; ++paso) {
         arana.caminar(v, I.beta, azar);
         for (int i = 0; i < I.dimension(); ++i) {
@@ -500,14 +482,14 @@ TEST(Arana, RegeneraLaMascaraYReiniciaElContador) {
     x.q.assign(1000, 0.0);
     Arana arana(x);
     Aleatorio azar(13);
-    arana.c = 60;  // pc^c es casi cero: la máscara se regenera
+    arana.c = 60;
     EXPECT_TRUE(arana.cambiarMascara(0.7, 1.0, azar));
     EXPECT_EQ(arana.c, 0);
     int unos = 0;
     for (unsigned char bit : arana.mascara) unos += bit;
     EXPECT_GT(unos, 0);
     EXPECT_LT(unos, 1000);
-    arana.c = 60;  // con pm = 0 todas las dimensiones quedan en cero
+    arana.c = 60;
     EXPECT_TRUE(arana.cambiarMascara(0.7, 0.0, azar));
     for (unsigned char bit : arana.mascara) EXPECT_EQ(bit, 0);
 }
@@ -522,7 +504,6 @@ TEST(Arana, ReflexionEnLosCasosLimite) {
     Aleatorio azar(17);
     EXPECT_EQ(Arana::reflejar(5.0, 1.0, 0.0, azar), 0.0);  // cota nula
     for (int i = 0; i < 100; ++i) {
-        // Dosis anterior por encima de la cota: el resultado se recorta al intervalo.
         const double arriba = Arana::reflejar(15.0, 12.0, 10.0, azar);
         const double abajo = Arana::reflejar(-1.0, 30.0, 10.0, azar);
         EXPECT_GE(arriba, 0.0);
@@ -532,7 +513,7 @@ TEST(Arana, ReflexionEnLosCasosLimite) {
     }
 }
 
-// ------------------------------------------------------------------------------ AlgoritmoSSA
+// TEST AlgoritmoSSA
 TEST(AlgoritmoSSA, ReproducibleConLaMismaSemillaYAdmisible) {
     const Instancia& I = completa();
     ParametrosSSA P;
@@ -549,7 +530,7 @@ TEST(AlgoritmoSSA, ReproducibleConLaMismaSemillaYAdmisible) {
     EXPECT_EQ(r1.evaluaciones, 500);
 }
 
-// ----------------------------------------------------------------------------------- Aleatorio
+// TEST Aleatorio
 TEST(Aleatorio, SecuenciasReproduciblesYEnSusIntervalos) {
     Aleatorio a(42), b(42);
     EXPECT_EQ(a.semilla(), 42u);
@@ -578,7 +559,7 @@ TEST(Aleatorio, SecuenciasReproduciblesYEnSusIntervalos) {
     EXPECT_NE(derivarSemilla("caso", 1), derivarSemilla("otro", 1));
 }
 
-// --------------------------------------------------------------- ModuloEjecucion (integración)
+// TEST ModuloEjecucion
 TEST(ModuloEjecucion, LeeLosParametrosDelAlgoritmo) {
     const ConfiguracionEjecucion c = ModuloEjecucion::leerConfiguracion(DATOS + "/parametros_ssa.csv");
     EXPECT_EQ(c.parametros.poblacion, 30);
@@ -615,7 +596,6 @@ TEST(ModuloEjecucion, EscribeUnaFilaPorRepeticionQueSeReproduceConSuSemilla) {
         EXPECT_LE(std::stoi(campos[6]), I.k);
         EXPECT_EQ(std::stol(campos[8]), 200);
         EXPECT_TRUE(admisible(I, resultados[filas - 1].mejor));
-        // La semilla del archivo repite la ejecución por separado, con la misma aptitud.
         Aleatorio azar(std::stoull(campos[1]));
         const ResultadoSSA r = AlgoritmoSSA(I, c.parametros).ejecutar(azar);
         EXPECT_EQ(r.mejor.Z, std::strtod(campos[2].c_str(), nullptr));
@@ -627,11 +607,11 @@ TEST(ModuloEjecucion, EscribeUnaFilaPorRepeticionQueSeReproduceConSuSemilla) {
 
 TEST(ModuloEjecucion, RechazaConfiguracionesInvalidas) {
     const fs::path ruta = fs::temp_directory_path() / "ssa_basico_parametros.csv";
-    std::ofstream(ruta) << "clave,valor\npoblacion,30\nra,1.0\npc,0.7\niteraciones,10\nrepeticiones,3\n";  // sin pm
+    std::ofstream(ruta) << "clave,valor\npoblacion,30\nra,1.0\npc,0.7\niteraciones,10\nrepeticiones,3\n";
     EXPECT_THROW(ModuloEjecucion::leerConfiguracion(ruta.string()), std::runtime_error);
     for (const char* valores : {"poblacion,0\niteraciones,10\nrepeticiones,3", "poblacion,30\niteraciones,0\nrepeticiones,3",
                                        "poblacion,30\niteraciones,10\nrepeticiones,0"}) {
-        std::ofstream(ruta) << "clave,valor\nra,1.0\npc,0.7\npm,0.1\n" << valores << '\n';  // un valor no positivo
+        std::ofstream(ruta) << "clave,valor\nra,1.0\npc,0.7\npm,0.1\n" << valores << '\n';
         EXPECT_THROW(ModuloEjecucion::leerConfiguracion(ruta.string()), std::runtime_error) << valores;
     }
     fs::remove(ruta);
@@ -655,7 +635,7 @@ TEST(ModuloEjecucion, MuestraLaTablaPorPantallaYRechazaUnaSalidaInvalida) {
     std::getline(lectura, linea);
     EXPECT_EQ(linea.rfind("completa: 54 fertilizantes x 3 etapas", 0), 0u);
     for (lineas = 1; std::getline(lectura, linea);) ++lineas;
-    EXPECT_EQ(lineas, 4);  // descripción, encabezado y una fila por repetición
+    EXPECT_EQ(lineas, 4);
     lectura.close();
     fs::remove(pantalla);
     fs::remove(salida);
@@ -663,20 +643,20 @@ TEST(ModuloEjecucion, MuestraLaTablaPorPantallaYRechazaUnaSalidaInvalida) {
     EXPECT_THROW(ModuloEjecucion::ejecutar(I, c, invalida.string(), nullptr), std::runtime_error);
 }
 
-// ------------------------------------------------------------------------- Programa (integración)
+// TEST Programa (integración)
 TEST(Programa, CodigosDeSalidaDeSsaBasico) {
     const fs::path parametros = fs::temp_directory_path() / "ssa_basico_programa.csv";
     const fs::path salida = fs::temp_directory_path() / "ssa_basico_programa_salida.csv";
     std::ofstream(parametros) << "clave,valor\npoblacion,5\nra,1.0\npc,0.7\npm,0.1\niteraciones,5\nrepeticiones,2\n";
     const std::string comunes = " \"" + parametros.string() + "\" \"" + salida.string() + "\"";
-    EXPECT_EQ(ejecutarPrograma(""), 2);                                          // faltan argumentos
-    EXPECT_EQ(ejecutarPrograma(" \"" + DATOS + "/no_existe\"" + comunes), 1);    // error al leer
-    EXPECT_EQ(ejecutarPrograma(" \"" + COMPLETA + "\"" + comunes), 0);           // ejecución correcta
+    EXPECT_EQ(ejecutarPrograma(""), 2);
+    EXPECT_EQ(ejecutarPrograma(" \"" + DATOS + "/no_existe\"" + comunes), 1);
+    EXPECT_EQ(ejecutarPrograma(" \"" + COMPLETA + "\"" + comunes), 0);
     std::ifstream lectura(salida);
     std::string linea;
     int filas = 0;
     while (std::getline(lectura, linea)) ++filas;
-    EXPECT_EQ(filas, 3);  // encabezado y dos repeticiones
+    EXPECT_EQ(filas, 3);
     lectura.close();
     fs::remove(parametros);
     fs::remove(salida);

@@ -12,7 +12,6 @@
 namespace barrido {
 namespace {
 
-// Números con coma decimal, como el resto de los documentos de la tesis.
 std::string coma(double x, int decimales) {
     char texto[48];
     std::snprintf(texto, sizeof texto, "%.*f", decimales, x);
@@ -49,11 +48,10 @@ struct Fase {
     long long evaluaciones = 0;
 };
 
-// Lo que se sabe de una configuración a través de las fases.
 struct Combinada {
-    const ResumenConfiguracion* fuente = nullptr;  // la fase más avanzada en que corrió
+    const ResumenConfiguracion* fuente = nullptr;
     const ResumenConfiguracion* porFase[3] = {nullptr, nullptr, nullptr};
-    int bandera[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};  // fase × (final, mejor): 1 pasa, 0 no, −1 no corrió
+    int bandera[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};
 };
 
 int cuenta(const std::vector<ResumenConfiguracion>& r, bool (*pred)(const ResumenConfiguracion&)) {
@@ -183,7 +181,6 @@ void escribirResumenEInforme(const std::filesystem::path& carpeta, const std::ve
               "de la selección. Reproducir exige cumplir en la fase 2 y en la 3.";
     md << "\n\n";
 
-    // Por qué no cumplen: con qué condiciones fallan las que aciertan la RE.
     if (fases[1].existe) {
         md << "## Qué condición falla en la fase 2\n\n"
            << "Entre las configuraciones con la mediana de RE dentro del rango publicado en los tres γ, dónde cae la "
@@ -306,7 +303,6 @@ void escribirResumenEInforme(const std::filesystem::path& carpeta, const std::ve
     auto alguna = [](const Fase& f) {
         return std::any_of(f.resumenes.begin(), f.resumenes.end(), [](const ResumenConfiguracion& r) { return r.cumpleAlguna(); });
     };
-    // Reproduce una configuración que cumple en la fase 2 y en la confirmación, con la misma solución.
     int reproducenFinal = 0, reproducenMejor = 0;
     if (fases[2].existe)
         for (const auto& id : orden) {

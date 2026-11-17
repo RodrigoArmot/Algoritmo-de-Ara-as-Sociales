@@ -1,13 +1,3 @@
-"""Tablas del capítulo 7 y de los Anexos L, N y O, a partir de los resultados guardados.
-
-Lee instancias/, resultados/verificacion.json, resultados/calibracion/ y resultados/comparacion/, y
-escribe resultados/tablas_capitulo7.md con todas las tablas en el formato de la tesis: coma decimal,
-porcentajes con un decimal y valores p menores que 0,001 como «< 0,001». No ejecuta nada: hay que correr
-antes verificar.py, calibrar.py (aranas, recocido y confirmar), comprobar_calibracion.py, comparar.py,
-analizar.py y medir_tiempos.py.
-
-Uso: .venv/Scripts/python experimentacion/tablas.py
-"""
 from decimal import ROUND_HALF_UP, Decimal
 import json
 import os
@@ -16,7 +6,7 @@ import sys
 CARPETA_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(CARPETA_PROYECTO, "generador"))
 
-from construccion import CARPETA_INSTANCIAS, leer_csv  # noqa: E402
+from construccion import CARPETA_INSTANCIAS, leer_csv
 
 RESULTADOS = os.path.join(CARPETA_PROYECTO, "resultados")
 SSA, SA = "Algoritmo de Arañas Sociales", "Recocido simulado"
@@ -39,7 +29,6 @@ NOMBRE_CONTRASTE = {"experimentacion": "Experimentación: SSA frente a SA", "rob
 # --- Formato ---
 
 def numero(valor, decimales=3):
-    # Redondeo aritmético (el 5 final aumenta la cifra anterior): el formato de Python redondea 0,5625 a 0,562.
     redondeado = Decimal(repr(float(valor))).quantize(Decimal(1).scaleb(-decimales), rounding=ROUND_HALF_UP)
     return f"{redondeado:.{decimales}f}".replace(".", ",").replace("-", "−")
 
@@ -53,12 +42,10 @@ def valor_p(valor):
 
 
 def p_igual(valor):
-    """«p < 0,001» o «p = 0,110», para usar dentro de una oración."""
     return "p < 0,001" if valor < 0.001 else f"p = {numero(valor, 3)}"
 
 
 def parametro(valor):
-    """Valores de parámetros: potencias de diez como ⟨10^(−k)⟩ y el resto con coma decimal."""
     if isinstance(valor, float) and 0 < valor < 1e-3:
         return f"⟨10^(−{round(-__import__('math').log10(valor))})⟩"
     if isinstance(valor, float) and valor.is_integer():

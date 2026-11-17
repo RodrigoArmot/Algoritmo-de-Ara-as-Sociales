@@ -1,24 +1,3 @@
-"""Generador de las instancias de prueba (resultado 7, capítulo 7).
-
-Crea, en la carpeta instancias/, todos los conjuntos:
-
-  Instancias que deben acertar, construidas hacia adelante (este archivo):
-    cal_  calibración       |F| × k × ε, 2 repeticiones          54   semilla maestra 2026
-    exp_  experimentación   |F| × k × ε × τ, 3 repeticiones     243   semilla maestra 2027
-    rob_  robustez          agua × V, 3 repeticiones             12   semilla maestra 2028
-  Instancias que deben fallar y entradas inválidas (fallos.py):
-    fal_  fallo con cota conocida de la desviación               25   semilla maestra 2029
-    inv_  entradas que ssa_basico debe rechazar                   5
-
-Cada instancia que debe acertar parte de una formulación que ya cumple las condiciones operativas, la
-generadora, y abre los intervalos de concentración alrededor de lo que esa formulación produce. Así es
-satisfacible por construcción: la generadora da D = 0, K = 1 y Z = 0,5, y el óptimo cumple Z* ≤ 0,5.
-
-Uso (en PyCharm, ejecutar este archivo; o desde la carpeta del proyecto):
-    .venv/Scripts/python generador/generar.py [carpeta_salida]
-Por omisión escribe en instancias/. Con la misma versión de NumPy y SciPy (requirements.txt), la salida
-es idéntica byte a byte; verificar.py lo comprueba.
-"""
 import itertools
 import os
 import sys
@@ -27,13 +6,12 @@ from construccion import (CARPETA_INSTANCIAS, CONDUCTIVIDAD_MAXIMA, NIVEL_CENTRA
                           InstanciaConstruida, escribir_csv, escribir_instancia, semilla_desde_texto)
 import fallos
 
-# Factores y niveles (capítulo 7, Tabla 17)
-TAMANOS_CATALOGO = [20, 35, 54]  # |F|
-MAXIMOS_FERTILIZANTES = [13, 16, 20]  # k
-DOSIS_MINIMAS = [0.01, 0.05, 0.25]  # ε, gramos
-TOLERANCIAS = [0.02, 0.05, 0.10]  # τ
+TAMANOS_CATALOGO = [20, 35, 54]
+MAXIMOS_FERTILIZANTES = [13, 16, 20]
+DOSIS_MINIMAS = [0.01, 0.05, 0.25]
+TOLERANCIAS = [0.02, 0.05, 0.10]
 TIPOS_AGUA = ["destilada", "cihnm"]
-VOLUMENES = [200.0, 1000.0]  # V, litros
+VOLUMENES = [200.0, 1000.0]
 
 SEMILLA_MAESTRA = {"calibracion": 2026, "experimentacion": 2027, "robustez": 2028}
 PREFIJO = {"calibracion": "cal", "experimentacion": "exp", "robustez": "rob"}
@@ -44,7 +22,6 @@ COLUMNAS_MANIFIESTO = ["instancia", "conjunto", "tipo", "caso", "F", "k", "eps",
 
 
 def disenos():
-    """Las 309 combinaciones de niveles, en el orden en que se generan."""
     c = NIVEL_CENTRAL
     for tamano, maximo, dosis in itertools.product(TAMANOS_CATALOGO, MAXIMOS_FERTILIZANTES, DOSIS_MINIMAS):
         for repeticion in (1, 2):
@@ -64,8 +41,6 @@ def generar_instancia_de_acierto(base, carpeta_salida, conjunto, tamano_catalogo
                                  dosis_minima, tolerancia, tipo_agua, volumen, repeticion):
     nombre = (f"{PREFIJO[conjunto]}_F{tamano_catalogo}_k{maximo_fertilizantes}_e{dosis_minima}"
               f"_t{tolerancia}_{tipo_agua}_V{int(volumen)}_r{repeticion}")
-    # El texto de la semilla conserva las abreviaturas del generador original (F, k, eps, tau, V, rep),
-    # para que las instancias sean las mismas.
     semilla = semilla_desde_texto(
         f"{SEMILLA_MAESTRA[conjunto]}|F={tamano_catalogo}|k={maximo_fertilizantes}|eps={dosis_minima}"
         f"|tau={tolerancia}|agua={tipo_agua}|V={volumen}|rep={repeticion}")

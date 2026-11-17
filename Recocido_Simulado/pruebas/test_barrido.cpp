@@ -1,4 +1,3 @@
-// Barrido de reproducción del recocido: variantes del recocido y arnés (Prompt_Barrido_Recocido.md).
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -77,7 +76,7 @@ TEST_F(VariantesGI, LaDeltaPorMediaGastaCienCandidatasYElPlanLasCuenta) {
     for (auto delta : {ParametrosRecocido::DeltaInicial::UnaPareja, ParametrosRecocido::DeltaInicial::Media}) {
         ConfiguracionBarrido c;
         c.deltaT0 = delta;
-        c.tFinal = 1e-5;  // t0 > tf: se recorren todos los niveles
+        c.tFinal = 1e-5;
         c.I = 20;
         c.n = 7;
         const RecocidoSimulado sa(I, p.configuracion, c.parametros());
@@ -91,15 +90,13 @@ TEST_F(VariantesGI, LaDeltaPorMediaGastaCienCandidatasYElPlanLasCuenta) {
 
 TEST(VariantesRecocido, LaPerturbacionFijaNoBajaConLaTemperatura) {
     ParametrosRecocido par;
-    EXPECT_DOUBLE_EQ(RecocidoSimulado::perturbacionMaxima(par, 5.0, 10.0), 0.075);  // decreciente: Ev·t/t0
+    EXPECT_DOUBLE_EQ(RecocidoSimulado::perturbacionMaxima(par, 5.0, 10.0), 0.075);
     par.perturbacion = ParametrosRecocido::Perturbacion::Fija;
     EXPECT_EQ(RecocidoSimulado::perturbacionMaxima(par, 5.0, 10.0), 0.15);
     EXPECT_EQ(RecocidoSimulado::perturbacionMaxima(par, 1e-5, 10.0), 0.15);
 }
 
 // ------------------------------------------------------------------------------ configuraciones
-// Los niveles de la tabla del prompt dan 2·2·4·3·2·3·3·2 = 1728 configuraciones. Las 3456 del prompt
-// cuentan cada una dos veces: evaluada con la solución final y con la mejor encontrada.
 TEST(Barrido, HayMilSetecientasVeintiochoConfiguracionesConIdentificadorUnico) {
     const auto lista = barrido::todas();
     ASSERT_EQ(lista.size(), 1728u);
@@ -109,10 +106,9 @@ TEST(Barrido, HayMilSetecientasVeintiochoConfiguracionesConIdentificadorUnico) {
         bases.insert(c.base());
     }
     EXPECT_EQ(ids.size(), 1728u);
-    EXPECT_EQ(bases.size(), 192u);  // 1728 / 9 pares (I, n)
+    EXPECT_EQ(bases.size(), 192u);
     EXPECT_EQ(barrido::cribado().size(), 768u);
 
-    // El ejemplo del prompt.
     ConfiguracionBarrido c;
     c.vecino = ParametrosRecocido::Vecino::Uno;
     c.tFinal = 1e-3;
@@ -150,20 +146,19 @@ TEST(Barrido, CriterioDistanciaYCribado) {
     EXPECT_TRUE(barrido::pasaCribado(dentro, r));
 
     auto fuera = dentro;
-    fuera[1].RE = 0.25;  // unas 9,6 veces el máximo de γ = 0,75: menos de una década, todavía pasa el cribado
+    fuera[1].RE = 0.25;
     EXPECT_FALSE(barrido::cumple(fuera, r));
     EXPECT_NEAR(barrido::distancia(fuera, r), std::log10(0.25 / 0.02599), 1e-12);
     EXPECT_TRUE(barrido::pasaCribado(fuera, r));
-    fuera[1].RE = 0.52;  // veinte veces: ya no
+    fuera[1].RE = 0.52;
     EXPECT_FALSE(barrido::pasaCribado(fuera, r));
 
     auto caro = dentro;
-    caro[2].costo = 32.1;  // el costo no entra en el cribado, sí en el criterio
+    caro[2].costo = 32.1;
     EXPECT_TRUE(barrido::pasaCribado(caro, r));
     EXPECT_FALSE(barrido::cumple(caro, r));
     EXPECT_NEAR(barrido::distancia(caro, r), 1.0, 1e-12);
 
-    // El costo cero de la dosificación nula, o mil veces fuera, cuenta como tres décadas.
     EXPECT_EQ(barrido::distanciaLog(0.0, r[0].costo), barrido::kTopeDecadas);
     EXPECT_EQ(barrido::distanciaLog(1e6, r[0].costo), barrido::kTopeDecadas);
 

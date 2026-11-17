@@ -1,24 +1,9 @@
-"""Óptimo exacto de cada instancia con HiGHS (scipy.optimize.milp): la referencia de calidad.
-
-No es un algoritmo rival. El modelo del capítulo 4 es lineal con variables enteras y se resuelve de forma
-exacta; su óptimo Z* dice cuánto puede acertar el algoritmo en cada instancia, y su cota inferior, que
-nunca puede bajar de ella. Es el mismo modelo que evalúa ssa_basico:
-    D = Σ_(e,s) (holgura inferior + holgura superior) / Cref,  K = costo/Kref,  Z = γ·D + (1 − γ)·K
-    cationes ≤ L;  ε·empleo ≤ q ≤ cota·empleo;  empleo ≤ selección;  Σ selección ≤ k.
-
-Uso (en PyCharm, ejecutar este archivo; o desde la carpeta del proyecto):
-    .venv/Scripts/python generador/exacto.py                 todas las instancias del manifiesto
-    .venv/Scripts/python generador/exacto.py <carpeta>       una sola instancia
-Escribe exacta.csv (f, s, q) en cada carpeta e instancias/referencias.csv con Z*, su cota inferior, D* y,
-en las instancias que deben fallar, D_cota.
-"""
 import os
 import sys
 from concurrent.futures import ProcessPoolExecutor
 
-# Cada proceso usa un solo hilo de álgebra lineal; con uno por núcleo, Windows se queda sin memoria virtual.
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-import numpy as np  # noqa: E402  (después de fijar los hilos)
+import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, milp
 from scipy.sparse import lil_matrix
 
@@ -32,29 +17,27 @@ COLUMNAS_REFERENCIAS = ["instancia", "conjunto", "tipo", "caso", "Z_generadora",
 
 
 def resolver(carpeta, limite_segundos=LIMITE_SEGUNDOS):
-    """Resuelve la instancia, escribe exacta.csv y devuelve estado, Z, cota inferior de Z, D y costo."""
     inst = Instancia(carpeta)
     num_especies, num_fertilizantes, num_etapas = len(inst.simbolos), inst.num_fertilizantes, inst.etapas
     gamma = inst.peso_desviacion
     cmin, cmax, cref = inst.concentracion_minima, inst.concentracion_maxima, inst.concentracion_referencia
     agua, aporte = inst.agua, inst.aporte
 
-    # Posición de cada variable en el vector de decisión
     num_dosis = num_fertilizantes * num_etapas
 
-    def indice_dosis(f, s):  # q[f, s], gramos
+    def indice_dosis(f, s):
         return f * num_etapas + s
 
-    def indice_empleo(f, s):  # z[f, s] ∈ {0, 1}: el fertilizante f se dosifica en la etapa s
+    def indice_empleo(f, s):
         return num_dosis + f * num_etapas + s
 
-    def indice_seleccion(f):  # y[f] ∈ {0, 1}: el fertilizante f se emplea en alguna etapa
+    def indice_seleccion(f):
         return 2 * num_dosis + f
 
-    def indice_holgura_inferior(e, s):  # lo que falta para llegar a Cmin, mg/L
+    def indice_holgura_inferior(e, s):
         return 2 * num_dosis + num_fertilizantes + e * num_etapas + s
 
-    def indice_holgura_superior(e, s):  # lo que sobra por encima de Cmax, mg/L
+    def indice_holgura_superior(e, s):
         return 2 * num_dosis + num_fertilizantes + num_especies * num_etapas + e * num_etapas + s
 
     num_variables = 2 * num_dosis + num_fertilizantes + 2 * num_especies * num_etapas
@@ -74,7 +57,6 @@ def resolver(carpeta, limite_segundos=LIMITE_SEGUNDOS):
     fila = 0
     for s in range(num_etapas):
         for e in range(num_especies):
-            # C = C0 + Σ α·q;   C + holgura inferior ≥ Cmin;   C − holgura superior ≤ Cmax
             for f in range(num_fertilizantes):
                 if aporte[e, f] > 0:
                     matriz[fila, indice_dosis(f, s)] = aporte[e, f]
@@ -86,16 +68,12 @@ def resolver(carpeta, limite_segundos=LIMITE_SEGUNDOS):
             minimo_fila.append(-np.inf)
             maximo_fila.append(cmax[e, s] - agua[e])
             fila += 2
-        # Suma equivalente de cationes de los fertilizantes ≤ L − u
         for f in range(num_fertilizantes):
             matriz[fila, indice_dosis(f, s)] = inst.cationes_por_gramo[f]
         minimo_fila.append(-np.inf)
         maximo_fila.append(inst.limite_cationes - inst.carga_cationes_agua)
         fila += 1
 
-    # Cota de la dosis (la β de ssa_basico): por encima, alguna especie excede su máximo en D(0)·Cref y la
-    # formulación ya es peor que no dosificar. Además evita que la tolerancia de integralidad deje pasar
-    # dosis por debajo de ε con un empleo de 1e-6.
     desviacion_sin_dosis = inst.desviacion_sin_dosis()
     cota_dosis = np.zeros((num_fertilizantes, num_etapas))
     for f in range(num_fertilizantes):
@@ -138,11 +116,9 @@ def resolver(carpeta, limite_segundos=LIMITE_SEGUNDOS):
     salida = dict(estado=int(resultado.status), mensaje=resultado.message)
     if resultado.x is None:
         return salida
-    cota_dual = getattr(resultado, "mip_dual_bound", None)  # None cuando no hay variables enteras
+    cota_dual = getattr(resultado, "mip_dual_bound", None)
     cota_inferior = float(cota_dual) if cota_dual is not None else np.nan
 
-    # Pulido: la tolerancia de integralidad puede dejar un empleo de 0,007 con una dosis de ε·0,007, por
-    # debajo de ε. Se redondean las binarias, se fijan y se resuelve el programa lineal que queda.
     binarias_fijas = np.round(resultado.x[binarias])
     minimo_variable = np.zeros(num_variables)
     minimo_variable[binarias] = binarias_fijas
@@ -158,7 +134,7 @@ def resolver(carpeta, limite_segundos=LIMITE_SEGUNDOS):
                  [[f, s, repr(float(dosis_gramos[f, s]))]
                   for f in range(num_fertilizantes) for s in range(num_etapas) if dosis_gramos[f, s] > 0])
     evaluacion = evaluar(inst, dosis_gramos)
-    if np.isnan(cota_inferior):  # sin variables enteras (catálogo vacío) el óptimo es su propia cota
+    if np.isnan(cota_inferior):
         cota_inferior = float(pulido.fun)
     salida.update(Z=float(pulido.fun), Z_cota_inferior=min(cota_inferior, float(pulido.fun)),
                   D=evaluacion["D"], costo=evaluacion["costo"], seleccionados=evaluacion["seleccionados"])

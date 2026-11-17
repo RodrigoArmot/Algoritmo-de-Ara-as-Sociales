@@ -1,4 +1,3 @@
-// Etapa 2 · recocido simulado de Guerra Ibarra et al. (2026) sobre el núcleo compartido.
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -57,12 +56,12 @@ TEST(Recocido, ElFactorDeEnfriamientoLlevaDeT0ATfEnIPasos) {
 }
 
 TEST(Recocido, MetropolisAceptaLasMejorasYLasPeoresConProbabilidadDecreciente) {
-    EXPECT_TRUE(RecocidoSimulado::acepta(5.0, 4.0, 1e-9, 0.999));  // mejora: siempre
-    EXPECT_TRUE(RecocidoSimulado::acepta(5.0, 5.0, 1.0, 0.999));   // igual: P = 1 > U
-    const double P = std::exp(-1.0);                               // peor por 1 a t = 1
+    EXPECT_TRUE(RecocidoSimulado::acepta(5.0, 4.0, 1e-9, 0.999));
+    EXPECT_TRUE(RecocidoSimulado::acepta(5.0, 5.0, 1.0, 0.999));
+    const double P = std::exp(-1.0);
     EXPECT_TRUE(RecocidoSimulado::acepta(4.0, 5.0, 1.0, P - 1e-9));
     EXPECT_FALSE(RecocidoSimulado::acepta(4.0, 5.0, 1.0, P + 1e-9));
-    EXPECT_TRUE(RecocidoSimulado::acepta(4.0, 5.0, 10.0, 0.9));    // más caliente, más aceptación
+    EXPECT_TRUE(RecocidoSimulado::acepta(4.0, 5.0, 10.0, 0.9));
     EXPECT_FALSE(RecocidoSimulado::acepta(4.0, 5.0, 0.1, 0.001));
 }
 
@@ -82,7 +81,6 @@ TEST_F(RecocidoGI, LaInstanciaEsElExperimento1) {
     EXPECT_EQ(I.Cmin(I.indiceEspecie("P"), 0), 60.0);
     EXPECT_EQ(I.Cmin(I.indiceEspecie("Cl"), 0), 5.0);
     EXPECT_EQ(I.Cmin(I.indiceEspecie("Na"), 0), 2.0);
-    // El N total cuenta todos los átomos de la fórmula, como la ec. (2): también los de la urea y los quelatos.
     EXPECT_EQ(I.fertilizante(I.indiceFertilizante("Urea")).n[static_cast<std::size_t>(I.indiceEspecie("N"))], 2);
     EXPECT_EQ(I.fertilizante(I.indiceFertilizante("Ironchelate")).n[static_cast<std::size_t>(I.indiceEspecie("N"))], 2);
 }
@@ -115,7 +113,6 @@ TEST_F(RecocidoGI, LaVecinaCambiaCadaDosisComoMuchoEvYNoReactivaLosCeros) {
     }
 }
 
-// Ec. (6) a (8) con una secuencia conocida: por cada dosis, primero ρ = Ev·u y después el signo.
 TEST_F(RecocidoGI, LaVecinaConUnaSecuenciaFija) {
     const RecocidoSimulado sa(I, p.configuracion, ParametrosRecocido{});
     Solucion x(I);
@@ -123,14 +120,11 @@ TEST_F(RecocidoGI, LaVecinaConUnaSecuenciaFija) {
     x.q(1, 0) = 200.0;
     SecuenciaFija azar({0.5, 0.2, 0.9, 0.7});
     const Solucion y = sa.vecina(x, 0.15, azar);
-    EXPECT_DOUBLE_EQ(y.q(0, 0), 100.0 + 100.0 * 0.075);  // ρ = 0,075; u = 0,2 < 0,5: sube
-    EXPECT_DOUBLE_EQ(y.q(1, 0), 200.0 - 200.0 * 0.135);  // ρ = 0,135; u = 0,7: baja
+    EXPECT_DOUBLE_EQ(y.q(0, 0), 100.0 + 100.0 * 0.075);
+    EXPECT_DOUBLE_EQ(y.q(1, 0), 200.0 - 200.0 * 0.135);
     for (int f = 2; f < I.numFertilizantes(); ++f) EXPECT_EQ(y.q(f, 0), 0.0);
 }
 
-// La ec. (13) toma Δ de una sola pareja de soluciones, de modo que t0 cambia entre ejecuciones y
-// puede quedar por debajo de tf. Con t0 > tf se recorren t0, t0·α, …, t0·α^I = tf; con t0 ≤ tf la
-// figura 1 termina tras el primer nivel.
 TEST_F(RecocidoGI, RecorreLasTemperaturasDeLaFigura1YCuentaLasEvaluaciones) {
     const ParametrosRecocido par = parametrosCortos(20, 7);
     const RecocidoSimulado sa(I, p.configuracion, par);
@@ -181,7 +175,6 @@ protected:
     const nucleo::Instancia& I = p.instancia;
 };
 
-// El arranque sobre el problema completo es el de la población inicial de las arañas.
 TEST_F(RecocidoCompleto, ElArranqueUsaKFertilizantesEntreEpsilonYBeta) {
     Aleatorio azar(4);
     for (int intento = 0; intento < 20; ++intento) {
@@ -214,7 +207,6 @@ TEST_F(RecocidoCompleto, ConLasTresRestriccionesDevuelveSolucionesAdmisibles) {
 }
 
 // ------------------------------------------------------------------ activación de dosis
-// Configuración comparada en el capítulo 7: todas las dosis, solo mejoras, Ev fija, con activación.
 namespace {
 ParametrosRecocido comparada(bool activar) {
     ParametrosRecocido par;
@@ -255,7 +247,7 @@ TEST_F(RecocidoCompleto, ConElVecinoUnoSoloSeActivaLaDosisElegidaSiEsNula) {
     par.vecino = ParametrosRecocido::Vecino::Uno;
     const RecocidoSimulado sa(I, p.configuracion, par);
     Aleatorio azar(22);
-    const Solucion nula(I);  // todas las dosis en cero
+    const Solucion nula(I);
     for (int intento = 0; intento < 30; ++intento) {
         const Solucion y = sa.vecina(nula, 0.1, azar);
         int positivas = 0;
@@ -284,8 +276,6 @@ TEST_F(RecocidoCompleto, ConActivacionDevuelveSolucionesAdmisiblesYMejoraLaInici
     }
 }
 
-// Sin dosis nulas la activación no sortea nada: en el experimento 1 de Guerra Ibarra la ejecución
-// es idéntica con y sin ella.
 TEST_F(RecocidoGI, SinDosisNulasLaActivacionNoCambiaLaEjecucion) {
     ParametrosRecocido sin = parametrosCortos(30, 20), con = sin;
     sin.aceptacion = con.aceptacion = ParametrosRecocido::Aceptacion::SoloMejoras;

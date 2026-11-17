@@ -45,7 +45,6 @@ Fila EjecutorBarrido::ejecutarUna(const ConfiguracionBarrido& configuracion, con
     f.semilla = semilla(fase, configuracion.identificador(), f.gamma, repeticion);
     nucleo::Aleatorio azar(f.semilla);
     const auto r = sa.ejecutar(azar);
-    // Con objetivos puntuales, D es la suma de errores relativos (RE) de Guerra Ibarra.
     f.reFinal = r.final.D;
     f.costoFinal = r.final.costo;
     f.reMejor = r.mejor.D;

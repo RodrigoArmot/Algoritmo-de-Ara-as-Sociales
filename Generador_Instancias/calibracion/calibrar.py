@@ -1,29 +1,3 @@
-"""Calibración de los parámetros de control (resultado 9, capítulo 7): un parámetro a la vez.
-
-Instancias: las 78 del conjunto de calibración del manifiesto, 54 que deben acertar (cal_) y 24 que deben
-fallar (fal_).
-
-Respuesta: la brecha media al óptimo exacto, (Z − Z*)/Z*, con Z* de instancias/referencias.csv. La
-aptitud media ya no sirve, porque el Z* de las instancias de fallo es varias veces el de las de acierto
-y dominaría el promedio; la brecha pone a todas en la misma escala.
-
-Procedimiento, el mismo de la calibración anterior: cada configuración se ejecuta dos veces por instancia
-con 30 000 evaluaciones de la función objetivo; se varía un parámetro a la vez desde la configuración
-vigente y se elige el valor de menor brecha media; ante un empate se conserva el vigente. Las pasadas se
-repiten hasta que una completa no cambia ningún valor. Las semillas dependen solo de la instancia y de
-la repetición, así que todas las configuraciones se miden con los mismos números aleatorios.
-
-Programas:
-  arañas    ssa_basico (SSA_Basico), con iteraciones = 30 000 / población
-  recocido  formulacion recocido (proyecto completo), con I + 1 temperaturas de n candidatas
-
-Uso (en PyCharm, ejecutar con parámetros; o desde la carpeta del proyecto):
-    .venv/Scripts/python calibracion/calibrar.py aranas   [--ssa-basico ruta]
-    .venv/Scripts/python calibracion/calibrar.py recocido [--formulacion ruta]
-    .venv/Scripts/python calibracion/calibrar.py confirmar [--ssa-basico ruta] [--formulacion ruta]
-Escribe resultados/calibracion/<algoritmo>.json y un CSV por configuración e instancia. Si se
-interrumpe, al volver a ejecutarlo retoma lo que falta.
-"""
 import argparse
 import json
 import os
@@ -33,8 +7,8 @@ import sys
 CARPETA_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(CARPETA_PROYECTO, "generador"))
 
-from construccion import CARPETA_INSTANCIAS, leer_csv  # noqa: E402
-from ejecucion import (COLUMNA_APTITUD, COLUMNA_DESVIACION, Ejecutor, nombre_de_configuracion,  # noqa: E402
+from construccion import CARPETA_INSTANCIAS, leer_csv
+from ejecucion import (COLUMNA_APTITUD, COLUMNA_DESVIACION, Ejecutor, nombre_de_configuracion,
                        preparar_carpeta, programas)
 
 CARPETA_RESULTADOS = os.path.join(CARPETA_PROYECTO, "resultados", "calibracion")
@@ -45,9 +19,7 @@ EMPATE = 1e-9
 APTITUD_GENERADORA = 0.5
 
 CONFIGURACION_DE_PARTIDA = {
-    # r_a, p_c y p_m de Yu y Li (2015a); la población de 30 es propia y fija el presupuesto.
     "aranas": dict(poblacion=30, ra=1.0, pc=0.7, pm=0.1),
-    # La configuración más cercana a la Tabla 5 de Guerra Ibarra et al. (2026), con activación de dosis.
     "recocido": dict(vecino="todos", aceptacion="mejoras", perturbacion="fija", delta="pareja", activar=True,
                      p=0.95, n=500, Ev=0.15, tf=1e-5),
 }
@@ -64,7 +36,6 @@ VALORES_A_PROBAR = {
 # --- Medida de la respuesta ---
 
 class Referencias:
-    """Z* y D_cota de las instancias de calibración, de instancias/referencias.csv."""
 
     def __init__(self):
         filas = leer_csv(os.path.join(CARPETA_INSTANCIAS, "referencias.csv"))
@@ -74,8 +45,6 @@ class Referencias:
 
 
 def medir(algoritmo, carpeta_configuracion, referencias):
-    """Brecha media a Z* (y su error estándar), y para el informe: tasa de acierto en las instancias que
-    deben acertar y si alguna de fallo bajó de su cota de desviación."""
     brechas_por_instancia, aciertos, ejecuciones_de_acierto, bajo_cota = [], 0, 0, 0
     for nombre in referencias.nombres:
         fila = referencias.por_nombre[nombre]
@@ -145,8 +114,6 @@ def calibrar(ejecutor, algoritmo, referencias):
 
 
 def confirmar(ejecutor, referencias, algoritmos):
-    """Partida frente a calibrada con cuatro repeticiones por instancia y la prueba de rangos con signo de
-    Wilcoxon sobre la brecha media de cada instancia."""
     from scipy.stats import wilcoxon
     lineas, cifras = [], {}
     for algoritmo in algoritmos:

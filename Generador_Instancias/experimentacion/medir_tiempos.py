@@ -1,15 +1,3 @@
-"""Tiempo de cómputo (resultado 10, capítulo 7), en un solo hilo y en la computadora en que se ejecuta.
-
-Algoritmos: 30 ejecuciones de cada uno, con su configuración calibrada y 30 000 evaluaciones, sobre las
-27 instancias de experimentación con τ = 0,05 y primera repetición; se informa la mediana del tiempo por
-ejecución. Método exacto: se resuelven de nuevo las 255 instancias de experimentación y robustez, cada
-una en una copia temporal para no tocar su exacta.csv, y se informan la mediana y el máximo.
-
-Los programas se ejecutan uno tras otro: conviene no tener otros procesos pesados abiertos.
-
-Uso: .venv/Scripts/python experimentacion/medir_tiempos.py [--ssa-basico ruta] [--formulacion ruta]
-Escribe resultados/comparacion/tiempos.json.
-"""
 import argparse
 import json
 import os
@@ -25,10 +13,10 @@ CARPETA_PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(CARPETA_PROYECTO, "generador"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from construccion import CARPETA_INSTANCIAS, leer_csv  # noqa: E402
-from ejecucion import Ejecutor, preparar_carpeta, programas  # noqa: E402
-from comparar import CARPETA_RESULTADOS, configuracion_calibrada  # noqa: E402
-import exacto  # noqa: E402
+from construccion import CARPETA_INSTANCIAS, leer_csv
+from ejecucion import Ejecutor, preparar_carpeta, programas
+from comparar import CARPETA_RESULTADOS, configuracion_calibrada
+import exacto
 
 REPETICIONES = 30
 

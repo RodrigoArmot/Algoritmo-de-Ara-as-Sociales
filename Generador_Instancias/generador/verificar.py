@@ -1,21 +1,3 @@
-"""Verificación del generador y de las instancias (resultado 7, «Verificación y validación»).
-
-Comprobaciones, cada una con su resultado:
-  1. Reproducibilidad: genera todo de nuevo en una carpeta temporal y lo compara byte a byte con instancias/.
-  2. Generadoras: en cada instancia que debe acertar, la generadora es admisible con D = 0 y Z = 0,5.
-  3. Óptimos exactos: cada exacta.csv es admisible y su Z coincide con referencias.csv. En las instancias
-     que deben acertar, Z* ≤ 0,5; en las que deben fallar, D* ≥ D_cota > 0. Si está el exactos.csv del
-     proyecto completo, los Z* de exp_ y rob_ coinciden con los anteriores.
-  4. ssa_basico sobre el conjunto de calibración y la instancia de catálogo vacío. En ninguna repetición
-     puede salir Z por debajo de la cota inferior de Z*, ni D por debajo de D_cota en las de fallo.
-     Además informa cuánto acierta el algoritmo: repeticiones con Z ≤ 0,5 y brecha media (Z − Z*)/Z*.
-  5. Entradas inválidas: ssa_basico termina con código 1 y el mensaje esperado.
-
-Uso (en PyCharm, ejecutar este archivo; o desde la carpeta del proyecto):
-    .venv/Scripts/python generador/verificar.py [--binario ruta/ssa_basico] [--repeticiones 30] [--exacto]
---exacto vuelve a resolver los óptimos antes de comprobarlos. Termina con «Todo se cumple.» y código 0
-si las cinco comprobaciones pasan, y guarda las cifras en resultados/verificacion.json.
-"""
 import argparse
 import filecmp
 import json
@@ -33,15 +15,13 @@ import generar
 
 TOLERANCIA = 1e-9
 APTITUD_GENERADORA = 0.5
-ARCHIVOS_DE_REFERENCIA = {"exacta.csv", "referencias.csv"}  # los escribe exacto.py, no el generador
+ARCHIVOS_DE_REFERENCIA = {"exacta.csv", "referencias.csv"}
 EXACTOS_ANTERIORES = os.path.join(os.path.dirname(CARPETA_PROYECTO), "Algoritmo de Arañas Sociales", "datos",
                                   "instancias", "una_etapa", "exactos.csv")
-# Parámetros de partida del algoritmo (Yu y Li, 2015a; población propia), los de SSA_Basico
 PARAMETROS_SSA = dict(poblacion=30, ra=1.0, pc=0.7, pm=0.1, iteraciones=1000)
 
 
 def buscar_ssa_basico():
-    """Busca el programa compilado al lado del proyecto, en SSA_Basico."""
     if os.environ.get("SSA_BASICO"):
         return os.environ["SSA_BASICO"]
     carpeta_superior = os.path.dirname(CARPETA_PROYECTO)
@@ -114,8 +94,6 @@ def comprobar_exactos(referencias):
     if os.path.isfile(EXACTOS_ANTERIORES):
         anteriores = {fila["instancia"]: float(fila["Z"]) for fila in leer_csv(EXACTOS_ANTERIORES)}
         for fila in referencias:
-            # Las instancias con agua de pozo no se comparan: su agua se corrigió el 14/11/2026 según el
-            # Cuadro 4 del CIHNM (2006), de modo que ya no son las del proyecto completo.
             if fila["instancia"] in anteriores and "_cihnm_" not in fila["instancia"]:
                 comparadas += 1
                 diferencia = abs(float(fila["Z_exacto"]) - anteriores[fila["instancia"]])
@@ -132,7 +110,6 @@ def ejecutar_ssa_basico(binario, carpeta_instancia, archivo_parametros, archivo_
 
 
 def comprobar_algoritmo(binario, referencias, repeticiones):
-    """Ejecuta ssa_basico en las instancias de calibración y verificación y compara con sus referencias."""
     elegidas = [fila for fila in referencias if fila["conjunto"] in ("calibracion", "verificacion")]
     fallas, informe = [], {"acierto": [], "fallo": []}
     with tempfile.TemporaryDirectory() as carpeta_temporal:

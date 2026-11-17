@@ -21,7 +21,7 @@ double OperadorReparacion::aporteRelativo(const Solucion& x, int f) const {
 void OperadorReparacion::reparar(Solucion& x) const {
     const int F = I.F, S = I.S;
 
-    // 1. Cota superior y dominio disjunto de la dosis mínima realizable.
+    // 1. Cota superior y dominio disjunto de la dosis mínima realizable
     for (int f = 0; f < F; ++f) {
         const double eps = I.fertilizantes[f].epsilon, delta = I.fertilizantes[f].delta;
         for (int s = 0; s < S; ++s) {
@@ -31,7 +31,7 @@ void OperadorReparacion::reparar(Solucion& x) const {
         }
     }
 
-    // 2. Tolerancia de conductividad.
+    // 2. Tolerancia de conductividad
     for (int s = 0; s < S; ++s) {
         double v = 0.0;
         for (int f = 0; f < F; ++f) v += I.coefCationes[f] * x.dosis(f, s);
@@ -44,8 +44,7 @@ void OperadorReparacion::reparar(Solucion& x) const {
         }
     }
 
-    // 3. Disponibilidad acotada de insumos. El aporte relativo se calcula una vez, antes de retirar.
-    // En empate se retira el más caro y, si también empatan, el de mayor índice.
+    // 3. Disponibilidad acotada de insumos
     std::vector<double> A(F, 0.0);
     int adquiridos = 0;
     for (int f = 0; f < F; ++f)

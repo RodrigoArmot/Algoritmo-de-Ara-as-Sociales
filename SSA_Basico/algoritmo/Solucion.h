@@ -1,6 +1,3 @@
-// Solución candidata (R3): las dosis q_(f,s), en gramos, y su evaluación. El empleo z y la
-// selección y no se guardan: se deducen de las dosis, porque un fertilizante está empleado en una
-// etapa si su dosis es positiva y seleccionado si lo está en alguna etapa.
 #pragma once
 
 #include <vector>
@@ -27,11 +24,11 @@ public:
         return n;
     }
 
-    std::vector<double> q;  // |F|·|S|, posición f·S + s
-    double costo = 0.0;     // USD
-    double D = 0.0;         // desviación del requerimiento nutricional
-    double K = 0.0;         // costo relativo, costo/Kref
-    double Z = 0.0;         // aptitud, γ·D + (1 − γ)·K
+    std::vector<double> q;
+    double costo = 0.0;
+    double D = 0.0;
+    double K = 0.0;
+    double Z = 0.0;
 
 private:
     int S_ = 0;

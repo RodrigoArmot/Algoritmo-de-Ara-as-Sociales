@@ -1,12 +1,3 @@
-"""Ejecución de los dos algoritmos en C++ sobre las instancias (calibración, comparación y tiempos).
-
-  arañas    ssa_basico (SSA_Basico): lee sus parámetros de un CSV; iteraciones = presupuesto / población
-  recocido  formulacion recocido (proyecto completo): I + 1 temperaturas de n candidatas
-
-Cada trabajo escribe su propio CSV de resultados; si ya existe, se salta, así que una corrida
-interrumpida se retoma donde quedó. Las semillas las fija cada programa a partir de la instancia y de la
-repetición, de modo que todas las configuraciones se miden con los mismos números aleatorios.
-"""
 import os
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
@@ -20,7 +11,6 @@ COLUMNA_COSTO = {"aranas": "costo", "recocido": "costo_mejor"}
 
 
 def buscar_programa(nombre, proyectos):
-    """Busca un programa compilado en las carpetas de compilación de los proyectos vecinos."""
     carpeta_superior = os.path.dirname(CARPETA_PROYECTO)
     for proyecto in proyectos:
         for compilacion in ("cmake-build-release", "build", "cmake-build-debug"):
@@ -32,8 +22,6 @@ def buscar_programa(nombre, proyectos):
 
 
 def programas(ruta_ssa_basico=None, ruta_formulacion=None):
-    """Rutas de los dos programas: las indicadas, las de las variables SSA_BASICO y FORMULACION, o las
-    que se encuentren compiladas al lado del proyecto."""
     return {"aranas": ruta_ssa_basico or os.environ.get("SSA_BASICO")
             or buscar_programa("ssa_basico", ["SSA_Basico", ""]),
             "recocido": ruta_formulacion or os.environ.get("FORMULACION")
@@ -46,7 +34,6 @@ def nombre_de_configuracion(configuracion):
 
 
 def escribir_parametros_ssa(carpeta_configuracion, configuracion, repeticiones):
-    """ssa_basico lee los parámetros de un CSV: se escribe uno por configuración, junto a sus resultados."""
     iteraciones = PRESUPUESTO_EVALUACIONES // configuracion["poblacion"]
     escribir_csv(os.path.join(carpeta_configuracion, "parametros_ssa.csv"), ["clave", "valor"], [
         ("poblacion", configuracion["poblacion"]), ("ra", repr(configuracion["ra"])),
@@ -82,7 +69,6 @@ ORDENES = {"aranas": orden_aranas, "recocido": orden_recocido}
 
 
 class Ejecutor:
-    """Corre trabajos (algoritmo, instancia, configuración, repeticiones, csv de salida) en paralelo."""
 
     def __init__(self, rutas_programas):
         self.programas = rutas_programas

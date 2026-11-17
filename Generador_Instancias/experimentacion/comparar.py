@@ -1,14 +1,3 @@
-"""Comparación de los dos algoritmos (resultado 10, capítulo 7).
-
-Corre 30 repeticiones de cada algoritmo, con su configuración calibrada (resultados/calibracion/*.json) y
-30 000 evaluaciones de la función objetivo, sobre las 243 instancias de experimentación y las 12 de
-robustez. Corre también el recocido sin activación de dosis sobre las de experimentación, para medir el
-efecto de la activación.
-
-Uso (en PyCharm, ejecutar este archivo; o desde la carpeta del proyecto):
-    .venv/Scripts/python experimentacion/comparar.py [--ssa-basico ruta] [--formulacion ruta]
-Escribe resultados/comparacion/<rama>/<instancia>.csv y configuraciones.json; después, analizar.py.
-"""
 import argparse
 import json
 import os
@@ -34,7 +23,6 @@ def configuracion_calibrada(algoritmo):
 
 
 def ramas():
-    """Cada rama: (algoritmo, configuración, conjuntos de instancias en que corre)."""
     aranas = configuracion_calibrada("aranas")
     recocido = configuracion_calibrada("recocido")
     return {"aranas": ("aranas", aranas, ("experimentacion", "robustez")),

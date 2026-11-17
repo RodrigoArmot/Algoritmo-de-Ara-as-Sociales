@@ -1,16 +1,3 @@
-"""Evaluación de una formulación con la función objetivo del capítulo 4, como la calcula ssa_basico.
-
-Reproduce en Python lo que hacen Instancia.cpp y FuncionObjetivo.cpp de SSA_Basico:
-    concentración  C = C0 + Σ_f α·q
-    desviación     D = Σ_(e,s) [máx(0, Cmin − C) + máx(0, C − Cmax)] / Cref
-    costo relativo K = costo / Kref
-    aptitud        Z = γ·D + (1 − γ)·K
-y comprueba que la formulación sea admisible: dosis nula o entre ε y δ, a lo más k fertilizantes
-empleados y la suma equivalente de cationes dentro del límite en cada etapa.
-
-Uso: .venv/Scripts/python generador/evaluar.py <carpeta_instancia> <solucion.csv>
-La solución es un CSV con columnas f, s, q (posición en el catálogo, etapa desde 0 y gramos).
-"""
 import os
 import sys
 
@@ -22,7 +9,6 @@ TOLERANCIA_RELATIVA = 1e-12
 
 
 class Instancia:
-    """Una instancia leída de su carpeta, con los datos derivados que usa la función objetivo."""
 
     def __init__(self, carpeta):
         self.carpeta = carpeta
@@ -49,7 +35,6 @@ class Instancia:
             especie, etapa = self.simbolos.index(fila["especie"]), int(fila["etapa"]) - 1
             self.concentracion_minima[especie, etapa] = float(fila["Cmin"])
             self.concentracion_maxima[especie, etapa] = float(fila["Cmax"])
-        # (Cref) El punto medio del intervalo, o la mitad de la cota máxima si la especie no tiene requerimiento.
         self.concentracion_referencia = np.where(
             self.concentracion_minima > 0, (self.concentracion_minima + self.concentracion_maxima) / 2.0,
             self.concentracion_maxima / 2.0)
@@ -62,7 +47,6 @@ class Instancia:
         peso_molecular = np.array([float(f["mw"]) for f in fertilizantes])
         atomos = np.array([[float(f[simbolo]) for simbolo in self.simbolos] for f in fertilizantes])
         atomos = atomos.reshape(len(fertilizantes), num_especies)
-        # (α) aporte[e, f] en mg/L por gramo, con el orden de operaciones de Instancia.cpp
         self.aporte = 1000.0 * self.peso_atomico[:, None] * atomos.T / (peso_molecular[None, :] * self.volumen)
 
         cationes_por_mg = np.where(self.carga_cation > 0, self.carga_cation / self.peso_atomico, 0.0)
@@ -76,19 +60,16 @@ class Instancia:
         return len(self.nombres_fertilizantes)
 
     def desviacion_por_especie(self, concentraciones):
-        """Aporte de cada especie y etapa a D, con las concentraciones dadas (forma especies × etapas)."""
         defecto = np.maximum(0.0, self.concentracion_minima - concentraciones)
         exceso = np.maximum(0.0, concentraciones - self.concentracion_maxima)
         return (defecto + exceso) / self.concentracion_referencia
 
     def desviacion_sin_dosis(self):
-        """(D(0)) Desviación con la dosificación nula: la concentración es la del agua de partida."""
         concentraciones = np.repeat(self.agua[:, None], self.etapas, axis=1)
         return float(self.desviacion_por_especie(concentraciones).sum())
 
 
 def leer_solucion(ruta, instancia):
-    """Matriz de dosis en gramos, fertilizantes × etapas, a partir de un CSV f, s, q."""
     dosis_gramos = np.zeros((instancia.num_fertilizantes, instancia.etapas))
     for fila in leer_csv(ruta):
         dosis_gramos[int(fila["f"]), int(fila["s"])] = float(fila["q"])
@@ -96,8 +77,6 @@ def leer_solucion(ruta, instancia):
 
 
 def evaluar(instancia, dosis_gramos):
-    """Aptitud y admisibilidad de una formulación. Devuelve un diccionario con Z, D, K, costo,
-    seleccionados, admisible y, si no lo es, el motivo."""
     concentraciones = instancia.agua[:, None] + instancia.aporte @ dosis_gramos
     desviacion = float(instancia.desviacion_por_especie(concentraciones).sum())
     costo = float(np.sum(dosis_gramos / 1000.0 * instancia.precio[:, None]))

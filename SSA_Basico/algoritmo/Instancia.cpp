@@ -8,7 +8,6 @@
 
 namespace {
 
-// CSV sencillo: separador coma, sin comillas y con encabezado en la primera fila.
 struct Tabla {
     std::string archivo;
     std::vector<std::string> encabezado;
@@ -64,7 +63,6 @@ int indiceEspecie(const Instancia& I, const std::string& simbolo) {
 
 }  // namespace
 
-// Derivados de la instancia (capítulos 4 y 5).
 void Instancia::calcularDerivados() {
     Instancia& I = *this;
     const int E = I.E, F = I.F, S = I.S;
@@ -79,14 +77,12 @@ void Instancia::calcularDerivados() {
         }
     }
 
-    // Cref: el punto medio del intervalo, o la mitad de la cota máxima si no hay requerimiento.
     I.Cref.assign(E * S, 0.0);
     for (int i = 0; i < E * S; ++i)
         I.Cref[i] = I.Cmin[i] > 0.0 ? (I.Cmin[i] + I.Cmax[i]) / 2.0 : I.Cmax[i] / 2.0;
 
     I.L = 9.819 * I.Emax - 1.462;
 
-    // Peso equivalente w_e = a_e / carga, solo para las especies de E+.
     I.u = 0.0;
     for (int e = 0; e < E; ++e)
         if (I.especies[e].carga > 0) I.u += I.C0[e] / (I.especies[e].pesoAtomico / I.especies[e].carga);
@@ -98,7 +94,6 @@ void Instancia::calcularDerivados() {
             if (esp.carga > 0) I.coefCationes[f] += a.alfa / (esp.pesoAtomico / esp.carga);
         }
 
-    // D(0): con la dosificación nula la concentración es la del agua de partida.
     I.D0 = 0.0;
     for (int s = 0; s < S; ++s)
         for (int e = 0; e < E; ++e) {
@@ -106,7 +101,6 @@ void Instancia::calcularDerivados() {
             I.D0 += (std::max(0.0, I.Cmin[i] - I.C0[e]) + std::max(0.0, I.C0[e] - I.Cmax[i])) / I.Cref[i];
         }
 
-    // β_(f,s) = mín{(Cmax_(e,s) + D(0)·Cref_(e,s))/α_(e,f) : α_(e,f) > 0}.
     I.beta.assign(F * S, std::numeric_limits<double>::infinity());
     for (int f = 0; f < F; ++f)
         for (int s = 0; s < S; ++s)
@@ -116,7 +110,6 @@ void Instancia::calcularDerivados() {
             }
 }
 
-// Una instancia inconsistente se rechaza al leerla, antes de ejecutar nada.
 void Instancia::validar() const {
     for (int i = 0; i < E * S; ++i)
         if (Cmin[i] > Cmax[i])

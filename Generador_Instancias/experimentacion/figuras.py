@@ -1,11 +1,3 @@
-"""Figuras del capítulo 7: calibración de cada algoritmo y brecha relativa al óptimo según el tamaño del
-catálogo. Decimales con coma. El valor elegido se marca con un punto de mayor tamaño y borde, de modo que
-se distingue también en una impresión en escala de grises.
-
-Uso:  python experimentacion/figuras.py [carpeta_de_salida]
-Lee resultados/calibracion/<algoritmo>.json y resultados/comparacion/experimentacion_por_instancia.csv.
-Por omisión escribe en resultados/figuras. Requiere Matplotlib.
-"""
 import csv
 import json
 import os
@@ -45,7 +37,7 @@ def figura_calibracion(algoritmo, carpeta_salida):
             eje.set_xscale("log")
         else:
             eje.xaxis.set_major_formatter(CON_COMA)
-        if max(brecha) - min(brecha) < 1e-9:  # todos los valores dan la misma brecha
+        if max(brecha) - min(brecha) < 1e-9:
             eje.set_ylim(brecha[0] - 10, brecha[0] + 10)
         eje.yaxis.set_major_formatter(CON_COMA)
         eje.set_xlabel(ETIQUETA[barrido["parametro"]])

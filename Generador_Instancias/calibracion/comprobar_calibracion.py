@@ -1,14 +1,3 @@
-"""Comprobaciones de la calibración (resultado 9), después de calibrar.py.
-
-1. Elección por mediana. Las brechas por instancia son asimétricas; se comprueba si elegir cada valor por
-   la mediana de la brecha, en lugar de por la media, cambia la configuración calibrada (pasada final).
-2. Borde de la rejilla. Si un valor elegido es el extremo de los valores probados, se prueban valores más
-   allá del borde con los demás parámetros en su valor calibrado, y se comparan con el elegido mediante la
-   prueba de rangos con signo de Wilcoxon sobre la brecha de cada instancia.
-
-Uso: .venv/Scripts/python calibracion/comprobar_calibracion.py [--ssa-basico ruta] [--formulacion ruta]
-Escribe resultados/calibracion/comprobaciones.json.
-"""
 import argparse
 import json
 import os
@@ -19,11 +8,10 @@ import numpy as np
 from scipy.stats import wilcoxon
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from calibrar import (CARPETA_RESULTADOS, EMPATE, REPETICIONES_CALIBRACION, Referencias, carpeta_de,  # noqa: E402
+from calibrar import (CARPETA_RESULTADOS, EMPATE, REPETICIONES_CALIBRACION, Referencias, carpeta_de,
                       evaluar_configuraciones, medir)
-from ejecucion import Ejecutor, programas  # noqa: E402
+from ejecucion import Ejecutor, programas
 
-# Valores más allá del borde de la rejilla, por algoritmo y parámetro
 MAS_ALLA_DEL_BORDE = {
     ("aranas", "pc", "inferior"): [0.001, 0.005],
     ("aranas", "pc", "superior"): [0.995, 0.999],
@@ -51,7 +39,6 @@ def eleccion_por_mediana(algoritmo, referencias):
             brechas = medir(algoritmo, carpeta_de(algoritmo, configuracion), referencias)["brecha_por_instancia"]
             por_instancia.append(brechas)
             medianas.append(statistics.median(brechas))
-        # Misma regla que la calibración: ante un empate se conserva el valor vigente.
         mejor = min(medianas)
         empatados = [i for i, m in enumerate(medianas) if m - mejor <= EMPATE]
         indice = next((i for i in empatados if barrido["valores"][i] == barrido["elegido"]), empatados[0])
@@ -60,7 +47,6 @@ def eleccion_por_mediana(algoritmo, referencias):
                     elegido_por_mediana=por_mediana, coincide=por_mediana == barrido["elegido"],
                     valores=barrido["valores"], brecha_mediana=medianas)
         if not fila["coincide"]:
-            # ¿Es significativa la diferencia entre los dos valores candidatos?
             del_elegido = por_instancia[barrido["valores"].index(barrido["elegido"])]
             prueba = wilcoxon(por_instancia[indice], del_elegido)
             fila.update(wilcoxon_p=float(prueba.pvalue),

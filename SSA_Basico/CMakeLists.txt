@@ -1,7 +1,3 @@
-# Versión básica del Algoritmo de Arañas Sociales: el programa (ssa_basico) y sus pruebas.
-#   cmake -S . -B build
-#   cmake --build build
-#   ctest --test-dir build
 cmake_minimum_required(VERSION 3.20)
 project(SSA_Basico LANGUAGES CXX)
 

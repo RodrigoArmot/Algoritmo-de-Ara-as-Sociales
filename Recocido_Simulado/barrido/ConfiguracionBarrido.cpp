@@ -55,14 +55,13 @@ std::string ConfiguracionBarrido::base() const {
 }
 
 std::string ConfiguracionBarrido::identificador() const {
-    // El orden de los tokens es el de la tabla de factores; I y n van antes de E_v.
     const std::string b = base();
     const auto ultimo = b.rfind('-');
     return b.substr(0, ultimo) + "-I" + std::to_string(I) + "-n" + std::to_string(n) + b.substr(ultimo);
 }
 
 ParametrosRecocido ConfiguracionBarrido::parametros() const {
-    ParametrosRecocido par;  // ll, ul, Ev inicial y arranque: los publicados
+    ParametrosRecocido par;
     par.vecino = vecino;
     par.aceptacion = aceptacion;
     par.tf = tFinal;

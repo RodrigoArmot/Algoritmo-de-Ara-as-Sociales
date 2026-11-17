@@ -1,23 +1,3 @@
-"""Instancias que deben fallar y entradas inválidas (resultado 7; Diseno_Experimental_R7.md, sección 5).
-
-Un caso de fallo solo prueba algo si se sabe de antemano cuánto debe fallar: «falló» no basta, porque un
-algoritmo roto también falla. Por eso cada instancia de fallo lleva una cota inferior de la desviación,
-D_cota, calculada sin resolver el problema. Ninguna formulación admisible puede bajar de ella, y si el
-algoritmo baja, hay un error.
-
-Cada caso parte de una instancia satisfacible en los niveles centrales y le aplica un solo cambio:
-    sinMo        se retiran del catálogo las dos fuentes de molibdeno (con |F| = 54 quedan 52)
-    k4           a lo más cuatro fertilizantes (k = 4)
-    eps1         dosis mínima realizable de 1 g
-    emax10       conductividad máxima de 1,0 dS/m
-Con |F| de 20, 35 y 54 y dos repeticiones son 24 instancias, que forman parte del conjunto de
-calibración. Una más, sinCatalogo (catálogo vacío, D = D(0) exactamente), es solo de verificación.
-
-Las cuatro cotas de abajo valen para cualquier instancia; D_cota es la mayor.
-
-Entradas inválidas (inv_): variaciones de la instancia base que ssa_basico debe rechazar con un mensaje
-concreto. Se listan en invalidas.csv con el texto del error esperado.
-"""
 import csv
 import itertools
 import math
@@ -35,10 +15,10 @@ CASOS_DE_FALLO = ["sinMo", "k4", "eps1", "emax10"]
 TAMANOS_CATALOGO = [20, 35, 54]
 REPETICIONES = (1, 2)
 MAXIMO_FERTILIZANTES_REDUCIDO = 4
-DOSIS_MINIMA_ALTA = 1.0  # gramos
-CONDUCTIVIDAD_REDUCIDA = 1.0  # dS/m, por debajo del quiebre de todas las instancias (1,44 a 2,13)
-COTA_MINIMA_DE_FALLO = 1e-6  # por debajo, el caso no garantiza fallar y se rechaza
-COMBINACIONES_MAXIMAS = 2_000_000  # para la búsqueda exhaustiva de la cota de cardinalidad
+DOSIS_MINIMA_ALTA = 1.0
+CONDUCTIVIDAD_REDUCIDA = 1.0
+COTA_MINIMA_DE_FALLO = 1e-6
+COMBINACIONES_MAXIMAS = 2_000_000
 
 ENTRADAS_INVALIDAS = [
     ("inv_limite_invertido", "límite inferior mayor que el superior en Nnit"),
@@ -52,11 +32,6 @@ ENTRADAS_INVALIDAS = [
 # --- Cotas inferiores de la desviación ---
 
 def partes_de_la_desviacion_del_agua(instancia):
-    """Por especie y etapa, la desviación que deja el agua sola, separada en defecto y exceso (ya / Cref).
-
-    El exceso no se puede corregir, porque los fertilizantes solo suman concentración: es un piso común a
-    todas las cotas. El defecto solo desaparece si algún fertilizante aporta la especie.
-    """
     agua = instancia.agua[:, None]
     defecto = np.maximum(0.0, instancia.concentracion_minima - agua) / instancia.concentracion_referencia
     exceso = np.maximum(0.0, agua - instancia.concentracion_maxima) / instancia.concentracion_referencia
@@ -64,19 +39,12 @@ def partes_de_la_desviacion_del_agua(instancia):
 
 
 def cota_por_especies_sin_fuente(instancia):
-    """Una especie que ningún fertilizante del catálogo aporta se queda con la concentración del agua."""
     defecto, exceso = partes_de_la_desviacion_del_agua(instancia)
     tiene_fuente = (instancia.aporte > 0).any(axis=1)
     return float(exceso.sum() + defecto[~tiene_fuente].sum())
 
 
 def cota_por_cardinalidad(instancia):
-    """Con a lo más k fertilizantes, las especies que ninguno de ellos aporta quedan sin cubrir.
-
-    Se busca, entre todos los grupos de k fertilizantes, el que deja menos desviación sin cubrir. Dos
-    fertilizantes que aportan las mismas especies cubren lo mismo, así que basta recorrer los patrones
-    de cobertura distintos.
-    """
     defecto, exceso = partes_de_la_desviacion_del_agua(instancia)
     defecto_por_especie = defecto.sum(axis=1)
     tiene_fuente = (instancia.aporte > 0).any(axis=1)
@@ -89,7 +57,7 @@ def cota_por_cardinalidad(instancia):
                        for f in range(instancia.num_fertilizantes)})
     tamano_grupo = min(maximo, len(patrones))
     if math.comb(len(patrones), tamano_grupo) > COMBINACIONES_MAXIMAS:
-        return piso  # sigue siendo una cota válida, aunque más débil
+        return piso
     peso = [defecto_por_especie[e] for e in por_cubrir]
     menor_sin_cubrir = math.inf
     for grupo in itertools.combinations(patrones, tamano_grupo):
@@ -102,9 +70,6 @@ def cota_por_cardinalidad(instancia):
 
 
 def cota_por_dosis_minima(instancia):
-    """Cada especie y etapa tiene dos opciones: ninguna fuente con dosis (queda el agua) o al menos una,
-    con no menos de ε gramos. En el segundo caso la concentración sube al menos α·ε, y si eso pasa de
-    Cmax el exceso es inevitable. Se toma la opción más favorable de cada especie y etapa."""
     defecto, exceso = partes_de_la_desviacion_del_agua(instancia)
     total = 0.0
     for especie in range(len(instancia.simbolos)):
@@ -119,13 +84,6 @@ def cota_por_dosis_minima(instancia):
 
 
 def cota_por_conductividad(instancia):
-    """Relajación del límite de cationes, etapa por etapa.
-
-    Llevar cada catión con requerimiento a su Cmin exige cierta carga en meq/L. Si pasa de lo que el
-    límite deja libre (L − u), hay que dejar algún catión por debajo de su Cmin. Bajar la especie e en
-    x mg/L libera w_e·x meq/L y cuesta x/Cref en D, así que conviene empezar por las que más liberan por
-    unidad de desviación (w_e·Cref mayor). Ninguna formulación puede hacerlo mejor que este reparto.
-    """
     defecto, exceso = partes_de_la_desviacion_del_agua(instancia)
     cota = float(exceso.sum())
     disponible = instancia.limite_cationes - instancia.carga_cationes_agua
@@ -152,7 +110,6 @@ def cotas_de_desviacion(instancia):
 
 
 def cota_de_desviacion(instancia):
-    """(D_cota) La mayor de las cuatro cotas: ninguna formulación admisible tiene menos desviación."""
     return max(cotas_de_desviacion(instancia).values())
 
 
@@ -162,7 +119,6 @@ def generar_instancia_de_fallo(base, carpeta_salida, caso, tamano_catalogo, repe
     c = NIVEL_CENTRAL
     fuentes_molibdeno = base.indices_de_fuentes("Mo")
     if caso == "sinMo":
-        # Sin las dos fuentes de molibdeno quedan 52 fertilizantes: el nivel |F| = 54 baja a 52.
         tamano_catalogo = min(tamano_catalogo, len(base.fertilizantes) - len(fuentes_molibdeno))
     nombre = f"fal_{caso}_F{tamano_catalogo}_r{repeticion}"
     semilla = semilla_desde_texto(f"{SEMILLA_MAESTRA_FALLOS}|caso={caso}|F={tamano_catalogo}|rep={repeticion}")
@@ -216,7 +172,6 @@ def leer_filas(ruta):
 
 
 def generar_entrada_invalida(carpeta, nombre):
-    """Copia la instancia base y le introduce un solo error."""
     os.makedirs(carpeta, exist_ok=True)
     for archivo in ("parametros.csv", "especies.csv", "agua.csv", "limites.csv", "fertilizantes.csv"):
         shutil.copyfile(os.path.join(CARPETA_BASE, archivo), os.path.join(carpeta, archivo))
