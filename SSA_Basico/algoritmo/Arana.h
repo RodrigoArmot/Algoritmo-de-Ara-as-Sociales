@@ -28,7 +28,7 @@ public:
 
     Solucion posicion;
     Vibracion objetivo;
-    int c = 0;                           // iteraciones desde que la vibración objetivo cambió
-    std::vector<double> m;               // desplazamiento propuesto en la iteración anterior
-    std::vector<unsigned char> mascara;  // máscara de dimensiones
+    int c = 0;
+    std::vector<double> m;
+    std::vector<unsigned char> mascara;
 };

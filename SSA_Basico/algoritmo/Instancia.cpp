@@ -35,7 +35,7 @@ Tabla leerCsv(const std::string& ruta) {
     tabla.archivo = ruta;
     std::string linea;
     while (std::getline(archivo, linea)) {
-        if (tabla.encabezado.empty() && linea.rfind("\xEF\xBB\xBF", 0) == 0) linea.erase(0, 3);  // BOM
+        if (tabla.encabezado.empty() && linea.rfind("\xEF\xBB\xBF", 0) == 0) linea.erase(0, 3);
         if (recortar(linea).empty()) continue;
         std::vector<std::string> campos;
         std::size_t inicio = 0, coma;

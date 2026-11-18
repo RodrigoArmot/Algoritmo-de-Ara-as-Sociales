@@ -12,11 +12,11 @@ struct Especie {
 
 struct Fertilizante {
     std::string nombre;
-    double mw = 0.0;          // peso molecular, g/mol
-    double precio = 0.0;      // USD/kg
-    double epsilon = 0.0;     // dosis mínima realizable, g
-    double delta = 0.0;       // cota superior de la dosis, g
-    std::vector<int> atomos;  // n_(e,f), en el orden de las especies
+    double mw = 0.0;
+    double precio = 0.0;
+    double epsilon = 0.0;
+    double delta = 0.0;
+    std::vector<int> atomos;
 };
 
 struct Aporte {

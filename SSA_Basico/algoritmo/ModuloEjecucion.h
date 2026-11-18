@@ -15,7 +15,7 @@ struct ConfiguracionEjecucion {
 
 class ModuloEjecucion {
 public:
-    // Lee parametros_ssa.csv
+    //Desde parametros_ssa.csv
     static ConfiguracionEjecucion leerConfiguracion(const std::string& ruta);
 
     static std::uint64_t semilla(const Instancia& instancia, int repeticion);
