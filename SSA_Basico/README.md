@@ -112,7 +112,7 @@ Todos son CSV con coma como separador, punto como separador decimal y encabezado
 |---|---|---|
 | `poblacion` | 30 | número de arañas |
 | `ra` | 1.0 | tasa de atenuación |
-| `pc` | 0.7 | probabilidad de conservar la máscara |
+| `pc` | 0.7 | probabilidad de cambio de máscara (Yu y Li, 2015a): la máscara se regenera con probabilidad 1 − pc^c, donde c es el número de iteraciones sin cambio de la vibración objetivo |
 | `pm` | 0.1 | tasa de máscara |
 | `iteraciones` | 1000 | criterio de parada |
 | `repeticiones` | 30 | ejecuciones independientes |
@@ -160,7 +160,7 @@ ctest --test-dir build
 | OperadorReparacion | 6 | cota superior; dominio disjunto de la dosis mínima; escalado de la etapa que excede la conductividad; 200 posiciones al azar con todos los fertilizantes quedan admisibles; retira el fertilizante de menor aporte relativo; desempate por precio y por índice |
 | AlgoritmoSSA | 5 | la posición inicial tiene k fertilizantes (o todos, si hay menos) con dosis entre ε y β; rechazo de parámetros no positivos; distancia y promedio de las desviaciones; la misma semilla repite la ejecución, otra semilla da otra, y la mejor solución es admisible |
 | Arana | 7 | adopta la vibración más intensa y descarta la de su objetivo; intensidad recibida según la distancia; la máscara no cambia con el contador en cero y se regenera cuando crece; la reflexión devuelve la dosis al intervalo, también en los casos límite; la caminata queda entre cero y la cota de búsqueda |
-| Aleatorio | 1 | la misma semilla repite la secuencia; reales, enteros y muestras en su intervalo; semilla de cada repetición |
+| Aleatorio | 1 | la misma semilla repite la secuencia; reales, enteros y muestras en su intervalo; semilla de cada repetición; valor de control de `mt19937_64` que fija la norma de C++; uniformidad de `entero` y `uniforme` con la prueba chi-cuadrado (α = 0,05) |
 | ModuloEjecucion | 4 | lee los parámetros del algoritmo y rechaza los inválidos; escribe una fila admisible por repetición, que se repite por separado con la semilla que guarda; tabla por pantalla y rechazo de una salida que no se puede crear |
 | Programa | 1 | códigos de salida de `ssa_basico`: 2 sin argumentos, 1 con una instancia inexistente y 0 con una ejecución correcta |
 
@@ -177,3 +177,15 @@ ctest --test-dir build
 | `límite inferior mayor que el superior en …` | en `limites.csv`, Cmin es mayor que Cmax |
 | `… no aporta ninguna especie de la instancia` | un fertilizante no tiene átomos de ninguna especie de `especies.csv` |
 | `el agua de partida agota por sí sola el límite de conductividad` | con esa agua, ninguna dosificación es admisible |
+
+## 10. Diferencias con la implementación de referencia
+
+El artículo (Yu y Li, 2015a) y la implementación que publica el autor (Yu, s. f., https://github.com/James-Yu/social-spider-algorithm) difieren en cinco puntos. En todos se sigue la versión en C++ de la implementación, que el autor declara estándar:
+
+1. Al regenerarse la máscara, cada dimensión toma el valor uno con una probabilidad generada aleatoriamente entre cero y `pm`, no con `pm`.
+2. El contador de iteraciones sin cambio se reinicia también al regenerarse la máscara.
+3. No se corrige una máscara compuesta únicamente por ceros o por unos.
+4. La fracción del desplazamiento anterior se genera por dimensión y no por araña.
+5. La araña descarta las vibraciones que proceden de su vibración objetivo antes de comparar las intensidades.
+
+La implementación de referencia no incluye el paso de atención de las restricciones que el artículo describe; aquí lo cumplen la reflexión de la caminata y el operador de reparación.

@@ -557,6 +557,40 @@ TEST(Aleatorio, SecuenciasReproduciblesYEnSusIntervalos) {
     EXPECT_EQ(derivarSemilla("caso", 1), derivarSemilla("caso", 1));
     EXPECT_NE(derivarSemilla("caso", 1), derivarSemilla("caso", 2));
     EXPECT_NE(derivarSemilla("caso", 1), derivarSemilla("otro", 1));
+
+    // Valor de control de la norma de C++ ([rand.predef]): la invocación 10 000 de mt19937_64 con la
+    // semilla por omisión (5489) produce 9981545732273789042. Cada llamada a uniforme() consume una
+    // salida del motor, de modo que la llamada 10 000 debe dar esa salida convertida a [0, 1).
+    Aleatorio control(5489);
+    double u10000 = 0.0;
+    for (int i = 0; i < 10000; ++i) u10000 = control.uniforme();
+    EXPECT_EQ(u10000, static_cast<double>(9981545732273789042ULL >> 11) * 0x1.0p-53);
+
+    // Uniformidad de las conversiones: prueba chi-cuadrado de bondad de ajuste, α = 0,05. Con semilla
+    // fija, el resultado es determinista. Valores críticos χ²(0,95; gl), calculados con SciPy.
+    const auto chiCuadrado = [](const std::vector<long>& frecuencias, double esperada) {
+        double x2 = 0.0;
+        for (long f : frecuencias) x2 += (f - esperada) * (f - esperada) / esperada;
+        return x2;
+    };
+    struct CasoEntero {
+        int n;             // clases: entero(n) en [0, n)
+        int extracciones;
+        double critico;    // gl = n − 1
+    };
+    for (const CasoEntero& caso : {CasoEntero{7, 700000, 12.592}, CasoEntero{20, 2000000, 30.144},
+                                   CasoEntero{54, 1080000, 70.993}}) {
+        Aleatorio azar(derivarSemilla("prueba", 1));
+        std::vector<long> frecuencias(caso.n, 0);
+        for (int i = 0; i < caso.extracciones; ++i) ++frecuencias[azar.entero(caso.n)];
+        EXPECT_LT(chiCuadrado(frecuencias, static_cast<double>(caso.extracciones) / caso.n), caso.critico)
+                << "entero(" << caso.n << ")";
+    }
+    // uniforme() en 100 clases de igual ancho; gl = 99.
+    Aleatorio azar(derivarSemilla("prueba", 2));
+    std::vector<long> frecuencias(100, 0);
+    for (int i = 0; i < 1000000; ++i) ++frecuencias[static_cast<int>(azar.uniforme() * 100)];
+    EXPECT_LT(chiCuadrado(frecuencias, 10000.0), 123.225) << "uniforme()";
 }
 
 // TEST ModuloEjecucion
